@@ -1,68 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Order Request</title>
-    <!-- 可以在此加入 CSS 或連結至外部樣式表 -->
+  <meta charset="UTF-8" />
+  <title>Order Request System - Home</title>
+  <!-- Optional: link to a Bootstrap CSS CDN for some basic styling -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
 </head>
-<body>
-    <h1>Order Request Form</h1>
-    <form id="requestForm">
-        <label for="studentName">Student Name:</label>
-        <input type="text" id="studentName" name="studentName" required><br><br>
-        
-        <label for="itemRequested">Item Requested:</label>
-        <input type="text" id="itemRequested" name="itemRequested" required><br><br>
-        
-        <label for="quantity">Quantity:</label>
-        <input type="number" id="quantity" name="quantity" required><br><br>
-        
-        <label for="justification">Justification:</label>
-        <textarea id="justification" name="justification"></textarea><br><br>
-        
-        <button type="submit">Submit</button>
-    </form>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row">
+      <div class="col-md-6 offset-md-3">
+        <div class="card shadow">
+          <div class="card-body">
+            <h2 class="card-title text-center">Welcome to the Order Request System</h2>
+            <p>Please enter your email address to continue:</p>
+            <div class="mb-3">
+              <label for="userEmail" class="form-label">Email address</label>
+              <input
+                type="email"
+                class="form-control"
+                id="userEmail"
+                placeholder="e.g., user@student.edu"
+                required
+              />
+            </div>
+            <button id="continueBtn" class="btn btn-primary w-100">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <div id="responseMessage"></div>
-
-    <script>
-        // 將此處替換為您在 Power Automate 取得的 HTTP POST URL
-        const powerAutomateUrl = "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01";
-
-        const form = document.getElementById('requestForm');
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            // 收集表單資料
-            const formData = {
-                studentName: document.getElementById('studentName').value,
-                itemRequested: document.getElementById('itemRequested').value,
-                quantity: parseInt(document.getElementById('quantity').value),
-                justification: document.getElementById('justification').value
-            };
-
-            try {
-                // 透過 Fetch API 將資料以 POST 方式送至 Power Automate
-                const response = await fetch(powerAutomateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                // 根據回傳狀態給使用者顯示提示訊息
-                if (response.ok) {
-                    document.getElementById('responseMessage').innerText = "Your request was submitted successfully.";
-                    form.reset(); // 清空表單
-                } else {
-                    document.getElementById('responseMessage').innerText = "There was an error submitting your request.";
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                document.getElementById('responseMessage').innerText = "An error occurred. Please try again.";
-            }
-        });
-    </script>
+  <script>
+    const continueBtn = document.getElementById("continueBtn");
+    continueBtn.addEventListener("click", () => {
+      const email = document.getElementById("userEmail").value.trim().toLowerCase();
+      if (!email) {
+        alert("Please enter an email address.");
+        return;
+      }
+      
+      // Simple example logic:
+      // If the email domain is "@student.edu", go to student.html;
+      // otherwise, go to supervisor.html.
+      // You can adapt or expand this to match your own environment.
+      if (email.startsWith("steve.morris")) {
+        window.location.href = "supervisor.html";
+      } else {
+        window.location.href = "student.html";
+      }
+    });
+  </script>
 </body>
 </html>
