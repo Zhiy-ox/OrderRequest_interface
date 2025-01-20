@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Supervisor Approval</title>
+</head>
+<body>
+    <h1>主管審批介面</h1>
+    <form id="supervisorForm">
+        <label for="orderId">訂單編號：</label>
+        <input type="text" id="orderId" name="orderId" required><br><br>
+        
+        <label for="approvalStatus">審核結果：</label>
+        <select id="approvalStatus" name="approvalStatus" required>
+            <option value="">請選擇</option>
+            <option value="Approved">同意</option>
+            <option value="Rejected">拒絕</option>
+        </select>
+        <br><br>
+
+        <!-- 其他欄位，如：備註意見、價格、預計到貨日期等，可自由新增 -->
+
+        <button type="submit">送出審批</button>
+    </form>
+
+    <div id="responseMessage"></div>
+
+    <script>
+        // 替換為您在 Power Automate 中「当收到 HTTP 请求时」對應主管流程的 POST URL
+        const supervisorFlowUrl = "YOUR_SUPERVISOR_FLOW_URL";
+
+        const supervisorForm = document.getElementById('supervisorForm');
+        supervisorForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = {
+                orderId: document.getElementById('orderId').value,
+                approvalStatus: document.getElementById('approvalStatus').value
+            };
+
+            try {
+                const response = await fetch(supervisorFlowUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').innerText = "審批已送出。";
+                    supervisorForm.reset();
+                } else {
+                    document.getElementById('responseMessage').innerText = "送出時發生錯誤。";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('responseMessage').innerText = "系統錯誤，請稍後再試。";
+            }
+        });
+    </script>
+</body>
+</html>
