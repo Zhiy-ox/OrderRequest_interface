@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Order Request</title>
+    <!-- 可以在此加入 CSS 或連結至外部樣式表 -->
+</head>
+<body>
+    <h1>Order Request Form</h1>
+    <form id="requestForm">
+        <label for="studentName">Student Name:</label>
+        <input type="text" id="studentName" name="studentName" required><br><br>
+        
+        <label for="itemRequested">Item Requested:</label>
+        <input type="text" id="itemRequested" name="itemRequested" required><br><br>
+        
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" required><br><br>
+        
+        <label for="justification">Justification:</label>
+        <textarea id="justification" name="justification"></textarea><br><br>
+        
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="responseMessage"></div>
+
+    <script>
+        // 將此處替換為您在 Power Automate 取得的 HTTP POST URL
+        const powerAutomateUrl = "PASTE_YOUR_FLOW_POST_URL_HERE";
+
+        const form = document.getElementById('requestForm');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            // 收集表單資料
+            const formData = {
+                studentName: document.getElementById('studentName').value,
+                itemRequested: document.getElementById('itemRequested').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                justification: document.getElementById('justification').value
+            };
+
+            try {
+                // 透過 Fetch API 將資料以 POST 方式送至 Power Automate
+                const response = await fetch(powerAutomateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                // 根據回傳狀態給使用者顯示提示訊息
+                if (response.ok) {
+                    document.getElementById('responseMessage').innerText = "Your request was submitted successfully.";
+                    form.reset(); // 清空表單
+                } else {
+                    document.getElementById('responseMessage').innerText = "There was an error submitting your request.";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('responseMessage').innerText = "An error occurred. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>
