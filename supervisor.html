@@ -1,63 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Supervisor Approval</title>
+  <meta charset="UTF-8" />
+  <title>Supervisor Approval</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
 </head>
-<body>
-    <h1>主管審批介面</h1>
-    <form id="supervisorForm">
-        <label for="orderId">訂單編號：</label>
-        <input type="text" id="orderId" name="orderId" required><br><br>
-        
-        <label for="approvalStatus">審核結果：</label>
-        <select id="approvalStatus" name="approvalStatus" required>
-            <option value="">請選擇</option>
-            <option value="Approved">同意</option>
-            <option value="Rejected">拒絕</option>
-        </select>
-        <br><br>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row">
+      <div class="col-12">
+        <h2>Supervisor Dashboard</h2>
+        <p>Review and approve/reject the order requests.</p>
 
-        <!-- 其他欄位，如：備註意見、價格、預計到貨日期等，可自由新增 -->
+        <!-- Button to load requests from SharePoint (or a Flow that fetches from SharePoint) -->
+        <button id="loadBtn" class="btn btn-success mb-3">Load Requests</button>
 
-        <button type="submit">送出審批</button>
-    </form>
+        <table class="table table-bordered table-striped" id="requestsTable">
+          <thead class="table-dark">
+            <tr>
+              <th>ID</th>
+              <th>Student Name</th>
+              <th>Materials</th>
+              <th>Quantity</th>
+              <th>Justification</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
 
-    <div id="responseMessage"></div>
+        <div id="responseMessage" class="text-danger fw-bold"></div>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        // 替換為您在 Power Automate 中「当收到 HTTP 请求时」對應主管流程的 POST URL
-        const supervisorFlowUrl = "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01";
+  <!-- Optional Bootstrap JS for any advanced components -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
 
-        const supervisorForm = document.getElementById('supervisorForm');
-        supervisorForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
+  <script>
+    // Replace this with your actual endpoint that returns a JSON array of existing orders.
+    // E.g., a Power Automate Flow or a direct SharePoint REST API.
+    const LIST_FETCH_URL = "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01";
 
-            const formData = {
-                orderId: document.getElementById('orderId').value,
-                approvalStatus: document.getElementById('approvalStatus').value
-            };
+    // Replace this with the Flow URL that supervisors call to update each item (approve/reject).
+    const SUPERVISOR_FLOW_URL = "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01";
 
-            try {
-                const response = await fetch(supervisorFlowUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
+    const loadBtn = document.getElementById("loadBtn");
+    const requestsTableBody = document.querySelector("#requestsTable tbody");
+    const responseMessage = document.getElementById("responseMessage");
 
-                if (response.ok) {
-                    document.getElementById('responseMessage').innerText = "審批已送出。";
-                    supervisorForm.reset();
-                } else {
-                    document.getElementById('responseMessage').innerText = "送出時發生錯誤。";
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                document.getElementById('responseMessage').innerText = "系統錯誤，請稍後再試。";
+    // 1. Load existing requests
+    loadBtn.addEventListener("click", async () => {
+      responseMessage.textContent = ""; // Clear any old messages
+      try {
+        const res = await fetch(LIST_FETCH_URL);
+        if (!res.ok) {
+          throw new Error("Failed to fetch requests.");
+        }
+        const data = await res.json(); // Expects an array of objects
+
+        // Clear existing rows
+        requestsTableBody.innerHTML = "";
+
+        // Populate table
+        data.forEach((item) => {
+          // item should include the necessary fields, e.g.:
+          // { id: 123, studentName: 'Alice', materials: 'Lens', quantity: 10, justification: 'Research' }
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.studentName || ""}</td>
+            <td>${item.materials || ""}</td>
+            <td>${item.quantity || ""}</td>
+            <td>${item.justification || ""}</td>
+            <td>
+              <button class="btn btn-sm btn-primary approveBtn">Approve</button>
+              <button class="btn btn-sm btn-danger rejectBtn">Reject</button>
+              <input type="text" class="form-control mt-1 rejectReason" style="display:none;" placeholder="Reason for rejection" />
+              <button class="btn btn-sm btn-info submitRejectBtn mt-1" style="display:none;">Submit</button>
+            </td>
+          `;
+          requestsTableBody.appendChild(row);
+
+          // Set up Approve / Reject logic
+          const approveBtn = row.querySelector(".approveBtn");
+          const rejectBtn = row.querySelector(".rejectBtn");
+          const rejectReasonInput = row.querySelector(".rejectReason");
+          const submitRejectBtn = row.querySelector(".submitRejectBtn");
+
+          // Approve
+          approveBtn.addEventListener("click", () => {
+            handleApproval(item.id, "Approved", "");
+          });
+
+          // Reject
+          rejectBtn.addEventListener("click", () => {
+            rejectReasonInput.style.display = "block";
+            submitRejectBtn.style.display = "inline-block";
+          });
+
+          submitRejectBtn.addEventListener("click", () => {
+            const reason = rejectReasonInput.value.trim();
+            if (!reason) {
+              alert("Please provide a reason for rejection.");
+              return;
             }
+            handleApproval(item.id, "Rejected", reason);
+          });
         });
-    </script>
+      } catch (err) {
+        console.error(err);
+        responseMessage.textContent = "Error loading requests.";
+      }
+    });
+
+    // 2. Approve/Reject function
+    async function handleApproval(orderId, status, rejectReason) {
+      responseMessage.textContent = "";
+      const payload = {
+        orderId: orderId,
+        approvalStatus: status,
+        rejectReason: rejectReason
+      };
+
+      try {
+        const res = await fetch(SUPERVISOR_FLOW_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error("Approval request failed.");
+        }
+
+        const result = await res.json();
+        // Display a success message or handle it as needed
+        responseMessage.textContent = `Order #${orderId} was updated to "${status}".`;
+      } catch (err) {
+        console.error(err);
+        responseMessage.textContent = `Error updating order #${orderId}.`;
+      }
+    }
+  </script>
 </body>
 </html>
