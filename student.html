@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Student Request Form</title>
+    <!-- 可連結您的 CSS, 或使用外部框架 -->
+</head>
+<body>
+    <h1>學生訂購申請</h1>
+    <form id="studentForm">
+        <label for="studentName">學生姓名：</label>
+        <input type="text" id="studentName" name="studentName" required><br><br>
+        
+        <label for="materials">材料名稱：</label>
+        <input type="text" id="materials" name="materials" required><br><br>
+        
+        <label for="quantity">數量：</label>
+        <input type="number" id="quantity" name="quantity" required><br><br>
+        
+        <label for="justification">申請原因：</label>
+        <textarea id="justification" name="justification"></textarea><br><br>
+        
+        <button type="submit">送出</button>
+    </form>
+    
+    <div id="responseMessage"></div>
+    
+    <script>
+        // 替換為您在 Power Automate 中「當收到 HTTP 請求時」所取得的 POST URL
+        const powerAutomateUrl = "YOUR_STUDENT_FLOW_URL";
+
+        const form = document.getElementById('studentForm');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = {
+                studentName: document.getElementById('studentName').value,
+                materials: document.getElementById('materials').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                justification: document.getElementById('justification').value
+            };
+
+            try {
+                const response = await fetch(powerAutomateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').innerText = "申請已送出。";
+                    form.reset();
+                } else {
+                    document.getElementById('responseMessage').innerText = "送出時發生錯誤。";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('responseMessage').innerText = "系統錯誤，請稍後再試。";
+            }
+        });
+    </script>
+</body>
+</html>
