@@ -17,6 +17,7 @@
           <div class="card-body">
             <h3 class="card-title mb-4 text-center">Student Order Request Form</h3>
             <form id="studentForm">
+              <!-- Requester Name -->
               <div class="mb-3">
                 <label for="Requester_Name" class="form-label">Requester_Name</label>
                 <input
@@ -28,8 +29,11 @@
                 />
               </div>
 
+              <!-- Materials/Equipment -->
               <div class="mb-3">
-                <label for="Materials_or_Equipment_Name" class="form-label">Materials_or_Equipment_Name</label>
+                <label for="Materials_or_Equipment_Name" class="form-label">
+                  Materials_or_Equipment_Name
+                </label>
                 <input
                   type="text"
                   class="form-control"
@@ -39,6 +43,7 @@
                 />
               </div>
 
+              <!-- Quantity -->
               <div class="mb-3">
                 <label for="Quantity" class="form-label">Quantity</label>
                 <input
@@ -50,22 +55,25 @@
                 />
               </div>
 
+              <!-- Link of Materials or Equipment -->
               <div class="mb-3">
-                <label for="Link_of_Materials_or_Equipment " class="form-label">Link_of_Materials_or_Equipment</label>
+                <label for="Link_of_Materials_or_Equipment" class="form-label">
+                  Link_of_Materials_or_Equipment
+                </label>
                 <input
                   type="text"
                   class="form-control"
                   id="Link_of_Materials_or_Equipment"
-                  placeholder="e.g., Optical Lens"
-                  required
+                  placeholder="e.g., https://supplier.com/product"
                 />
               </div>
 
+              <!-- Proposal -->
               <div class="mb-3">
                 <label for="Proposal" class="form-label">Proposal</label>
                 <textarea
                   class="form-control"
-                  id="Proposal
+                  id="Proposal"
                   rows="3"
                   placeholder="Why do you need these?"
                 ></textarea>
@@ -81,7 +89,7 @@
     </div>
   </div>
 
-  <!-- Bootstrap JS (Optional if you need features like modals, but fetch works without it) -->
+  <!-- Bootstrap JS (Optional if you need modals, etc. fetch works without it) -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
   ></script>
@@ -94,10 +102,16 @@
     studentForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
+      // Collect form data (match the 'id' attributes above):
       const formData = {
-       Requester_name: document.getElementById("Requester_name").value.trim(),
-        Materials_or_Equipment_Name: document.getElementById("Materials_or_Equipment_Name").value.trim(),
+        Requester_Name: document.getElementById("Requester_Name").value.trim(),
+        Materials_or_Equipment_Name: document
+          .getElementById("Materials_or_Equipment_Name")
+          .value.trim(),
         Quantity: parseInt(document.getElementById("Quantity").value, 10),
+        Link_of_Materials_or_Equipment: document
+          .getElementById("Link_of_Materials_or_Equipment")
+          .value.trim(),
         Proposal: document.getElementById("Proposal").value.trim()
       };
 
