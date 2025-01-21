@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Create SharePoint Item Demo</title>
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-  />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Order Request</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="bg-light">
   <div class="container py-5">
@@ -14,17 +12,15 @@
       <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
         <div class="card shadow">
           <div class="card-body">
-            <h3 class="card-title mb-4 text-center">Submit your Order Request</h3>
+            <h3 class="card-title mb-4 text-center">Submit Your Order Request</h3>
             <form id="itemForm">
-              <!-- Materials_x002f_equipmentName -->
+              <!-- Materials_or_Equipment_Name -->
               <div class="mb-3">
-                <label for="Materials_x002f_equipmentName" class="form-label">
-                  Materials or Equipment Name
-                </label>
+                <label for="Materials_or_Equipment_Name" class="form-label">Materials or Equipment Name</label>
                 <input
                   type="text"
                   class="form-control"
-                  id="Materials_x002f_equipmentName"
+                  id="Materials_or_Equipment_Name"
                   placeholder="e.g., E7, BL006, etc."
                   required
                 />
@@ -64,47 +60,40 @@
                 ></textarea>
               </div>
 
-              <!-- LinkofMaterials_x002f_Equipment -->
+              <!-- Link_of_Materials_or_Equipment -->
               <div class="mb-3">
-                <label for="LinkofMaterials_x002f_Equipment" class="form-label">
-                  Links of Materials or Equipment
-                </label>
+                <label for="Link_of_Materials_or_Equipment" class="form-label">Link of Materials or Equipment</label>
                 <input
                   type="text"
                   class="form-control"
-                  id="LinkofMaterials_x002f_Equipment"
+                  id="Link_of_Materials_or_Equipment"
                   placeholder="e.g., https://supplier.com/product"
                 />
               </div>
 
-              <!-- TheOrderTrackingURL -->
+              <!-- The_Order_Tracking_URL -->
               <div class="mb-3">
-                <label for="TheOrderTrackingURL" class="form-label">
-                  Order Tracking URL
-                </label>
+                <label for="The_Order_Tracking_URL" class="form-label">Order Tracking URL</label>
                 <input
                   type="text"
                   class="form-control"
-                  id="TheOrderTrackingURL"
+                  id="The_Order_Tracking_URL"
                   placeholder="e.g., https://tracking.com/order/123"
                 />
               </div>
 
-              <!-- OrderSumbittedTime -->
+              <!-- Order_submitted_Time -->
               <div class="mb-3">
-                <label for="OrderSumbittedTime" class="form-label">
-                  Order Sumbitted Time
-                </label>
+                <label for="Order_submitted_Time" class="form-label">Order Submitted Time</label>
                 <input
                   type="datetime-local"
                   class="form-control"
-                  id="OrderSumbittedTime"
+                  id="Order_submitted_Time"
                 />
               </div>
 
               <button type="submit" class="btn btn-primary w-100">Submit</button>
             </form>
-
             <div id="responseMessage" class="mt-3" style="min-height: 1.5em;"></div>
           </div>
         </div>
@@ -112,15 +101,9 @@
     </div>
   </div>
 
-  <!-- Bootstrap JS (optional) -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-  ></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Replace with your actual Power Automate endpoint (Flow URL)
-    const CREATE_ITEM_FLOW_URL =
-      "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Tt5rReEuy-aWUDpDu6k0KqH0J2_jv4HQ4CvgKyocnuM";
+    const CREATE_ITEM_FLOW_URL = "YOUR_FLOW_URL_HERE"; // Replace with your actual Power Automate endpoint
 
     const itemForm = document.getElementById("itemForm");
     itemForm.addEventListener("submit", async (event) => {
@@ -128,17 +111,13 @@
 
       // Collect form data into a JSON object
       const formData = {
-        Materials_x002f_equipmentName:
-          document.getElementById("Materials_x002f_equipmentName").value.trim(),
+        Materials_or_Equipment_Name: document.getElementById("Materials_or_Equipment_Name").value.trim(),
         Quantity: parseInt(document.getElementById("Quantity").value, 10),
         Unit: document.getElementById("Unit").value.trim(),
         Proposal: document.getElementById("Proposal").value.trim(),
-        LinkofMaterials_x002f_Equipment:
-          document.getElementById("LinkofMaterials_x002f_Equipment").value.trim(),
-        TheOrderTrackingURL:
-          document.getElementById("TheOrderTrackingURL").value.trim(),
-        OrderSumbittedTime:
-          document.getElementById("OrderSumbittedTime").value
+        Link_of_Materials_or_Equipment: document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
+        The_Order_Tracking_URL: document.getElementById("The_Order_Tracking_URL").value.trim(),
+        Order_submitted_Time: document.getElementById("Order_submitted_Time").value
       };
 
       try {
@@ -152,7 +131,7 @@
 
         if (response.ok) {
           document.getElementById("responseMessage").textContent =
-            "Item successfully created in SharePoint.";
+            "Item successfully created.";
           itemForm.reset();
         } else {
           document.getElementById("responseMessage").textContent =
