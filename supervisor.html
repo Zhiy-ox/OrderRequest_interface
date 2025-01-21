@@ -22,17 +22,15 @@
           <thead class="table-dark">
             <tr>
               <th>ID</th>
-              <td>${item.Requester_Name ? item.Requester_Name.DisplayName : ""}</td>
+              <th>Requester Name</th>
               <th>Materials_or_Equipment_Name</th>
               <th>Quantity</th>
               <th>Unit</th>
-      
               <th>Proposal</th>
               <th>Links_of_Materials_or_Equipment</th>
               <th>The_Order_Tracking_URL</th>
               <th>Order_Submitted_Time</th>
-              
-              
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -45,64 +43,88 @@
     </div>
   </div>
 
-  <!-- Optional Bootstrap JS for any advanced components -->
+  <!-- Optional Bootstrap JS (for features like modals) -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
   ></script>
 
   <script>
-    // Replace this with your actual endpoint that returns a JSON array of existing orders.
-    // E.g., a Power Automate Flow or a direct SharePoint REST API.
-    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // 1) URL that returns the JSON array of orders (Power Automate GET flow or SharePoint REST).
+    const LIST_FETCH_URL =
+      "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
-    // Replace this with the Flow URL that supervisors call to update each item (approve/reject).
-    const SUPERVISOR_FLOW_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // 2) URL for supervisor approvals (Power Automate POST flow).
+    const SUPERVISOR_FLOW_URL =
+      "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
     const responseMessage = document.getElementById("responseMessage");
 
-    // 1. Load existing requests
+    // Load existing requests from your flow/SharePoint
     loadBtn.addEventListener("click", async () => {
-      responseMessage.textContent = ""; // Clear any old messages
+      responseMessage.textContent = ""; // Clear old messages
       try {
         const res = await fetch(LIST_FETCH_URL);
         if (!res.ok) {
           throw new Error("Failed to fetch requests.");
         }
-        const data = await res.json(); // Expects an array of objects
+        // The flow should return an array. In some cases, it might be { value: [ ... ] },
+        // so adjust accordingly if needed. For example, if your JSON is { "value": [ ... ] },
+        // you'd do: const data = (await res.json()).value;
+        const data = await res.json();
 
-        // Clear existing rows
+        // Clear existing table rows
         requestsTableBody.innerHTML = "";
 
-        // Populate table
+        // Populate table rows
         data.forEach((item) => {
-          // item should include the necessary fields, e.g.:
-          // { id: 123, studentName: 'Alice', materials: 'Lens', quantity: 10, justification: 'Research' }
+          // Example property mapping based on your JSON:
+          // - ID: item.ID
+          // - Requester Name (Person field): item.RequesterName.DisplayName
+          // - Materials or Equipment: item.Materials_x002f_equipmentName
+          // - Quantity: item.Quantity
+          // - Unit: item.Unit
+          // - Proposal: item.BriefProposal or item.Proposal (depending on your actual JSON)
+          // - Link(s): item.LinkofMaterials_x002f_Equipment or item.Links_of_Materials_or_Equipment
+          // - Tracking: item.TheOrderTrackingURL or item.The_Order_Tracking_URL
+          // - Time: item.OrderSumbittedTime or item.Order_submitted_Time
+
           const row = document.createElement("tr");
-         
-
-
           row.innerHTML = `
-            <td>${item.ID}</td>
-            <td>${item.Requester_Name || ""}</td>
-            <td>${item.Materials_or_Equipment_Name || ""}</td>
+            <td>${item.ID || ""}</td>
+            <td>${
+              item.RequesterName
+                ? item.RequesterName.DisplayName
+                : ""
+            }</td>
+            <td>${item.Materials_x002f_equipmentName || ""}</td>
             <td>${item.Quantity || ""}</td>
             <td>${item.Unit || ""}</td>
-            <td>${item.Proposal || ""}</td>
-            <td>${item.Links_of_Materials_or_Equipment || ""}</td>
-            <td>${item.The_Order_Tracking_URL || ""}</td>
-            <td>${item.Order_Submitted_Time || ""}</td>      
+            <td>${item.BriefProposal || ""}</td>
+            <td>${item.LinkofMaterials_x002f_Equipment || ""}</td>
+            <td>${item.TheOrderTrackingURL || ""}</td>
+            <td>${item.OrderSumbittedTime || ""}</td>
             <td>
               <button class="btn btn-sm btn-primary approveBtn">Approve</button>
               <button class="btn btn-sm btn-danger rejectBtn">Reject</button>
-              <input type="text" class="form-control mt-1 rejectReason" style="display:none;" placeholder="Reason for rejection" />
-              <button class="btn btn-sm btn-info submitRejectBtn mt-1" style="display:none;">Submit</button>
+              <input
+                type="text"
+                class="form-control mt-1 rejectReason"
+                style="display:none;"
+                placeholder="Reason for rejection"
+              />
+              <button
+                class="btn btn-sm btn-info submitRejectBtn mt-1"
+                style="display:none;"
+              >
+                Submit
+              </button>
             </td>
           `;
           requestsTableBody.appendChild(row);
 
-          // Set up Approve / Reject logic
+          // Approve/Reject Logic
           const approveBtn = row.querySelector(".approveBtn");
           const rejectBtn = row.querySelector(".rejectBtn");
           const rejectReasonInput = row.querySelector(".rejectReason");
@@ -110,7 +132,7 @@
 
           // Approve
           approveBtn.addEventListener("click", () => {
-            handleApproval(item.id, "Approved", "");
+            handleApproval(item.ID, "Approved", "");
           });
 
           // Reject
@@ -125,7 +147,7 @@
               alert("Please provide a reason for rejection.");
               return;
             }
-            handleApproval(item.id, "Rejected", reason);
+            handleApproval(item.ID, "Rejected", reason);
           });
         });
       } catch (err) {
@@ -134,7 +156,7 @@
       }
     });
 
-    // 2. Approve/Reject function
+    // Approve/Reject function
     async function handleApproval(orderId, status, rejectReason) {
       responseMessage.textContent = "";
       const payload = {
@@ -155,9 +177,7 @@
         if (!res.ok) {
           throw new Error("Approval request failed.");
         }
-
         const result = await res.json();
-        // Display a success message or handle it as needed
         responseMessage.textContent = `Order #${orderId} was updated to "${status}".`;
       } catch (err) {
         console.error(err);
