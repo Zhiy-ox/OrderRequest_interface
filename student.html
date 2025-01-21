@@ -19,7 +19,7 @@
               <!-- Materials_x002f_equipmentName -->
               <div class="mb-3">
                 <label for="Materials_x002f_equipmentName" class="form-label">
-                  Materilals or Eqiupment Name
+                  Materials or Equipment Name
                 </label>
                 <input
                   type="text"
@@ -55,7 +55,7 @@
 
               <!-- Proposal -->
               <div class="mb-3">
-                <label for="Proposal" class="form-label">Proposal</label>
+                <label for="Proposal" class="form-label">Brief Proposal</label>
                 <textarea
                   class="form-control"
                   id="Proposal"
@@ -100,7 +100,6 @@
                   class="form-control"
                   id="OrderSumbittedTime"
                 />
-                <!-- Alternatively, type="text" if you prefer raw ISO8601 string input -->
               </div>
 
               <button type="submit" class="btn btn-primary w-100">Submit</button>
@@ -119,8 +118,9 @@
   ></script>
 
   <script>
-    // Replace with your actual Power Automate endpoint (the Flow URL)
-    const CREATE_ITEM_FLOW_URL = "https://prod-138.westeurope.logic.azure.com:443/workflows/877185416c504d72bb3b358ce1ed3b99/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Tt5rReEuy-aWUDpDu6k0KqH0J2_jv4HQ4CvgKyocnuM";
+    // Replace with your actual Power Automate endpoint (Flow URL)
+    const CREATE_ITEM_FLOW_URL =
+      "YOUR_FLOW_URL_HERE";
 
     const itemForm = document.getElementById("itemForm");
     itemForm.addEventListener("submit", async (event) => {
@@ -138,7 +138,7 @@
         TheOrderTrackingURL:
           document.getElementById("TheOrderTrackingURL").value.trim(),
         OrderSumbittedTime:
-          document.getElementById("OrderSumbittedTime").value // maybe convert to ISO if needed
+          document.getElementById("OrderSumbittedTime").value
       };
 
       try {
