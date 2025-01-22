@@ -46,6 +46,7 @@
                   class="form-control"
                   id="Unit"
                   placeholder="e.g., g, pcs, etc."
+                  required
                 />
               </div>
 
@@ -54,9 +55,10 @@
                 <label for="Proposal" class="form-label">Reason</label>
                 <textarea
                   class="form-control"
-                  id="Reason"
+                  id="Proposal"
                   rows="3"
                   placeholder="Short justification or proposal"
+                  required
                 ></textarea>
               </div>
 
@@ -89,6 +91,7 @@
                   type="datetime-local"
                   class="form-control"
                   id="Order_submitted_Time"
+                  required
                 />
               </div>
 
@@ -104,53 +107,53 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const CREATE_ITEM_FLOW_URL =
-  "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // Replace with your actual Power Automate endpoint
+      "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // Replace with your actual Power Automate endpoint
 
-const itemForm = document.getElementById("itemForm");
-itemForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+    const itemForm = document.getElementById("itemForm");
+    itemForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
 
-  // Collect form data into a JSON object
-  const formData = {
-    "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
-    "Quantity": parseInt(document.getElementById("Quantity").value, 10),
-    "Unit": document.getElementById("Unit").value.trim(),
-    "Proposal": document.getElementById("Reason").value.trim(),
-    "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
-    "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
-    "Order_Sumbitted_Time": new Date().toISOString() // Automatically capture current timestamp
-  };
+      // Collect form data into a JSON object
+      const formData = {
+        "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
+        "Quantity": parseInt(document.getElementById("Quantity").value, 10),
+        "Unit": document.getElementById("Unit").value.trim(),
+        "Proposal": document.getElementById("Proposal").value.trim(),
+        "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
+        "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
+        "Order_Sumbitted_Time": document.getElementById("Order_submitted_Time").value
+      };
 
-  // Wrap the formData in an array to match Automate's `@item()` references
-  const formDataArray = [formData];
+      // Wrap the formData in an array to match Power Automate's `@item()` references
+      const formDataArray = [formData];
 
-  try {
-    // Send data to Power Automate
-    const response = await fetch(CREATE_ITEM_FLOW_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(formDataArray) // Convert data to JSON format
+      try {
+        // Send the HTTP POST request to Power Automate
+        const response = await fetch(CREATE_ITEM_FLOW_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(formDataArray)
+        });
+
+        if (response.ok) {
+          // Display success message
+          document.getElementById("responseMessage").textContent =
+            "Item successfully created.";
+          itemForm.reset();
+        } else {
+          const errorDetails = await response.json();
+          console.error("Error details:", errorDetails);
+          document.getElementById("responseMessage").textContent =
+            "Error creating item. Check the console for details.";
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        document.getElementById("responseMessage").textContent =
+          "An unexpected error occurred. Please try again.";
+      }
     });
-
-    if (response.ok) {
-      // Display success message
-      document.getElementById("responseMessage").textContent =
-        "Item successfully created.";
-      itemForm.reset(); // Reset the form fields
-    } else {
-      const errorDetails = await response.json();
-      console.error("Error details:", errorDetails);
-      document.getElementById("responseMessage").textContent =
-        "Error creating item. Check the console for details.";
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    document.getElementById("responseMessage").textContent =
-      "An unexpected error occurred. Please try again.";
-  }
-});
   </script>
 </body>
 </html>
