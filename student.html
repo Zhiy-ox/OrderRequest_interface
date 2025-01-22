@@ -119,6 +119,8 @@
         The_Order_Tracking_URL: document.getElementById("The_Order_Tracking_URL").value.trim(),
         Order_submitted_Time: document.getElementById("Order_submitted_Time").value
       };
+      
+      const formDataArray = [formData];
 
       try {
         const response = await fetch(CREATE_ITEM_FLOW_URL, {
@@ -126,7 +128,7 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(formData)
+          body: JSON.stringify(formDataArray)
         });
 
         if (response.ok) {
