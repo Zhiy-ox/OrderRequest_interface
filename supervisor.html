@@ -23,13 +23,13 @@
             <tr>
               <th>ID</th>
               <th>Requester Name</th>
-              <th>Materials_or_Equipment_Name</th>
+              <th>Materials or Equipment Name</th>
               <th>Quantity</th>
               <th>Unit</th>
               <th>Proposal</th>
-              <th>Links_of_Materials_or_Equipment</th>
-              <th>The_Order_Tracking_URL</th>
-              <th>Order_Submitted_Time</th>
+              <th>Links of Materials or Equipment</th>
+              <th>The Order Tracking URL</th>
+              <th>Order Submitted Time</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -82,7 +82,7 @@
           // Example property mapping based on your JSON:
           // - ID: item.ID
           // - Requester Name (Person field): item.RequesterName.DisplayName
-          // - Materials or Equipment: item.Materials_x002f_equipmentName
+          // - Materials or Equipment: item.Materials_or_Equipment_Name
           // - Quantity: item.Quantity
           // - Unit: item.Unit
           // - Proposal: item.Proposal or item.Proposal (depending on your actual JSON)
@@ -98,13 +98,13 @@
                 ? item.RequesterName.DisplayName
                 : ""
             }</td>
-            <td>${item.Materials_x002f_equipmentName || ""}</td>
+            <td>${item.Materials_or_Equipment_Name || ""}</td>
             <td>${item.Quantity || ""}</td>
             <td>${item.Unit || ""}</td>
             <td>${item.Proposal || ""}</td>
-            <td>${item.LinkofMaterials_x002f_Equipment || ""}</td>
-            <td>${item.TheOrderTrackingURL || ""}</td>
-            <td>${item.OrderSumbittedTime || ""}</td>
+            <td>${item.Link_of_Materials_or_Equipment || ""}</td>
+            <td>${item.The_Order_Tracking_URL || ""}</td>
+            <td>${item.Order_submitted_Time || ""}</td>
             <td>
               <button class="btn btn-sm btn-primary approveBtn">Approve</button>
               <button class="btn btn-sm btn-danger rejectBtn">Reject</button>
