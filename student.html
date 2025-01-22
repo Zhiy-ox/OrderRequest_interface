@@ -125,7 +125,7 @@
       };
 
       // Wrap the formData in an array to match Power Automate's `@item()` references
-      const formDataArray = [formData];
+      //const formDataArray = [formData];
 
       try {
         // Send the HTTP POST request to Power Automate
@@ -134,7 +134,7 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(formDataArray)
+          body: JSON.stringify(formData)
         });
 
         if (response.ok) {
