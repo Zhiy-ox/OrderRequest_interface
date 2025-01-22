@@ -114,19 +114,17 @@
       event.preventDefault();
 
       // Collect form data into a JSON object
-      const formData = {
-        "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
-        "Quantity": parseInt(document.getElementById("Quantity").value, 10),
-        "Unit": document.getElementById("Unit").value.trim(),
-        "Proposal": document.getElementById("Proposal").value.trim(),
-        "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
-        "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
-        "Order_Sumbitted_Time": document.getElementById("Order_submitted_Time").value
-      };
-
-      // Wrap the formData in an array to match Power Automate's `@item()` references
-      const formDataArray = [formData];
-
+     const formDataArray = [
+  {
+    "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
+    "Quantity": parseInt(document.getElementById("Quantity").value, 10),
+    "Unit": document.getElementById("Unit").value.trim(),
+    "Proposal": document.getElementById("Proposal").value.trim(),
+    "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
+    "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
+    "Order_Sumbitted_Time": document.getElementById("Order_submitted_Time").value
+  }
+];
       try {
         // Send the HTTP POST request to Power Automate
         const response = await fetch(CREATE_ITEM_FLOW_URL, {
