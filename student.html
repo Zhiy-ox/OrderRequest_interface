@@ -19,32 +19,17 @@
       align-items: center;
       z-index: 1000;
       backdrop-filter: blur(10px); /* Apply blur to the background */
-      opacity: 0; /* Initial state for fade-in animation */
-      visibility: hidden;
-      transition: opacity 0.5s ease, visibility 0.5s ease; /* Smooth fade-in and fade-out */
-    }
-
-    /* Show spinner */
-    .spinner-overlay.show {
-      opacity: 1;
-      visibility: visible;
     }
 
     /* Spinner content */
     .spinner-content {
       text-align: center;
       color: #fff;
-      animation: spin 1s linear infinite; /* Spinner rotation */
     }
 
-    /* Rotate animation */
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
+    /* Hide spinner by default */
+    .d-none {
+      display: none;
     }
 
     /* Blur effect for the form when spinner is active */
@@ -53,46 +38,73 @@
       pointer-events: none; /* Disable interactions */
       opacity: 0.5;
     }
-  </style>
+</style>
 </head>
 <body class="bg-light">
-  <!-- Spinner Overlay -->
-  <div id="spinnerContainer" class="spinner-overlay">
-    <div class="spinner-content">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Form Container -->
-  <div id="formContainer" class="container py-5">
+  <div class="container py-5">
     <div class="row">
       <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
         <div class="card shadow">
           <div class="card-body">
             <h3 class="card-title mb-4 text-center">Submit Your Order Request</h3>
             <form id="itemForm">
-              <!-- Form fields -->
+              <!-- Materials_or_Equipment_Name -->
               <div class="mb-3">
                 <label for="Materials_or_Equipment_Name" class="form-label">Materials or Equipment Name</label>
-                <input type="text" class="form-control" id="Materials_or_Equipment_Name" required />
+                <input
+                  type="text"
+                  class="form-control"
+                  id="Materials_or_Equipment_Name"
+                  placeholder="e.g., E7, BL006, etc."
+                  required
+                />
               </div>
+
+              <!-- Quantity -->
               <div class="mb-3">
                 <label for="Quantity" class="form-label">Quantity</label>
-                <input type="number" class="form-control" id="Quantity" placeholder="Please indicate the quantity required" required />
+                <input
+                  type="number"
+                  class="form-control"
+                  id="Quantity"
+                  placeholder="e.g., 10"
+                  required
+                />
               </div>
+
+              <!-- Unit -->
               <div class="mb-3">
                 <label for="Unit" class="form-label">Unit</label>
-                <input type="text" class="form-control" id="Unit" placeholder="Unit, g/pcs/ml etc.." />
+                <input
+                  type="text"
+                  class="form-control"
+                  id="Unit"
+                  placeholder="e.g., g, pcs, etc."
+                  required
+                />
               </div>
+
+              <!-- Proposal -->
               <div class="mb-3">
                 <label for="Reason" class="form-label">Reason</label>
-                <textarea class="form-control" id="Reason" rows="3" placeholder="Enter your reason here" required></textarea>
+                <textarea
+                  class="form-control"
+                  id="Reason"
+                  rows="3"
+                  placeholder="Short justification or proposal"
+                  required
+                ></textarea>
               </div>
+
+              <!-- Link_of_Materials_or_Equipment -->
               <div class="mb-3">
                 <label for="Link_of_Materials_or_Equipment" class="form-label">Link of Materials or Equipment</label>
-                <input type="text" class="form-control" id="Link_of_Materials_or_Equipment" placeholder="Enter the purchasing link URL here" />
+                <input
+                  type="text"
+                  class="form-control"
+                  id="Link_of_Materials_or_Equipment"
+                  placeholder="e.g., https://supplier.com/product"
+                />
               </div>
               <button type="submit" class="btn btn-primary w-100">Submit</button>
             </form>
@@ -105,30 +117,26 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const CREATE_ITEM_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // Replace with your actual endpoint
-    const itemForm = document.getElementById("itemForm");
-    const spinnerContainer = document.getElementById("spinnerContainer");
-    const formContainer = document.getElementById("formContainer");
+    const CREATE_ITEM_FLOW_URL =
+      "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // Replace with your actual Power Automate endpoint
 
+    const itemForm = document.getElementById("itemForm");
     itemForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      // Show spinner and blur the form
-      spinnerContainer.classList.add("show");
-      formContainer.classList.add("blurred");
-
       // Collect form data into a JSON object
-      const formData = {
-        "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
-        "Quantity": parseInt(document.getElementById("Quantity").value, 10),
-        "Unit": document.getElementById("Unit").value.trim(),
-        "Proposal": document.getElementById("Proposal").value.trim(),
-        "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
-        "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
-        "Order_Sumbitted_Time": new Date().toISOString()
-      };
-
+     const formData = 
+  {
+    "Materials_or_Equipment_Name": document.getElementById("Materials_or_Equipment_Name").value.trim(),
+    "Quantity": parseInt(document.getElementById("Quantity").value, 10),
+    "Unit": document.getElementById("Unit").value.trim(),
+    "Proposal": document.getElementById("Proposal").value.trim(),
+    "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
+    "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
+    "Order_Sumbitted_Time":new Date().toISOString()
+  };
       try {
+        // Send the HTTP POST request to Power Automate
         const response = await fetch(CREATE_ITEM_FLOW_URL, {
           method: "POST",
           headers: {
@@ -138,20 +146,20 @@
         });
 
         if (response.ok) {
-          document.getElementById("responseMessage").textContent = "Item successfully created.";
+          // Display success message
+          document.getElementById("responseMessage").textContent =
+            "Item successfully created.";
           itemForm.reset();
         } else {
           const errorDetails = await response.json();
           console.error("Error details:", errorDetails);
-          document.getElementById("responseMessage").textContent = "Error creating item. Check the console for details.";
+          document.getElementById("responseMessage").textContent =
+            "Error creating item. Check the console for details.";
         }
       } catch (error) {
         console.error("Error:", error);
-        document.getElementById("responseMessage").textContent = "An unexpected error occurred. Please try again.";
-      } finally {
-        // Hide spinner and remove blur effect
-        spinnerContainer.classList.remove("show");
-        formContainer.classList.remove("blurred");
+        document.getElementById("responseMessage").textContent =
+          "An unexpected error occurred. Please try again.";
       }
     });
   </script>
