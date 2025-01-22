@@ -62,7 +62,6 @@
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Loading...</span>
       </div>
-      <p class="spinner-text mt-3">Processing your request...</p>
     </div>
   </div>
 
@@ -81,27 +80,19 @@
               </div>
               <div class="mb-3">
                 <label for="Quantity" class="form-label">Quantity</label>
-                <input type="number" class="form-control" id="Quantity" required />
+                <input type="number" class="form-control" id="Quantity" placeholder="Please indicate the quantity required" required />
               </div>
               <div class="mb-3">
                 <label for="Unit" class="form-label">Unit</label>
-                <input type="text" class="form-control" id="Unit" />
+                <input type="text" class="form-control" id="Unit" placeholder="Unit, g/pcs/ml etc.." />
               </div>
               <div class="mb-3">
-                <label for="Proposal" class="form-label">Reason</label>
-                <textarea class="form-control" id="Proposal" rows="3" required></textarea>
+                <label for="Reason" class="form-label">Reason</label>
+                <textarea class="form-control" id="Reason" rows="3" placeholder="Enter your reason here" required></textarea>
               </div>
               <div class="mb-3">
                 <label for="Link_of_Materials_or_Equipment" class="form-label">Link of Materials or Equipment</label>
-                <input type="text" class="form-control" id="Link_of_Materials_or_Equipment" />
-              </div>
-              <div class="mb-3">
-                <label for="The_Order_Tracking_URL" class="form-label">Order Tracking URL</label>
-                <input type="text" class="form-control" id="The_Order_Tracking_URL" />
-              </div>
-              <div class="mb-3">
-                <label for="Order_submitted_Time" class="form-label">Order Submitted Time</label>
-                <input type="datetime-local" class="form-control" id="Order_submitted_Time" required />
+                <input type="text" class="form-control" id="Link_of_Materials_or_Equipment" placeholder="Enter the purchasing link URL here" />
               </div>
               <button type="submit" class="btn btn-primary w-100">Submit</button>
             </form>
@@ -134,7 +125,7 @@
         "Proposal": document.getElementById("Proposal").value.trim(),
         "Link_of_Materials_or_Equipment": document.getElementById("Link_of_Materials_or_Equipment").value.trim(),
         "The_Order_Tracking_URL": document.getElementById("The_Order_Tracking_URL").value.trim(),
-        "Order_Sumbitted_Time": document.getElementById("Order_submitted_Time").value
+        "Order_Sumbitted_Time": new Date().toISOString()
       };
 
       try {
