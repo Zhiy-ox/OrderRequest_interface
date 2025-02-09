@@ -13,7 +13,7 @@
     <div class="row">
       <div class="col-12">
         <h2>Supervisor Dashboard</h2>
-        <p>Review and approve/reject the order requests.</p>
+        <p>Review the order requests.</p>
 
         <!-- Button to load requests from SharePoint (or a Flow that fetches from SharePoint) -->
         <button id="loadBtn" class="btn btn-success mb-3">Load Requests</button>
@@ -30,7 +30,7 @@
               <th>Links of Materials or Equipment</th>
               <th>The Order Tracking URL</th>
               <th>Order Submitted Time</th>
-              <th>Action</th>
+              <th>Decision</th>
             </tr>
           </thead>
           <tbody>
@@ -54,8 +54,9 @@
       "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
     // 2) URL for supervisor approvals (Power Automate POST flow).
-    const SUPERVISOR_FLOW_URL =
-      "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // Commented out because decision making will now be handled using Microsoft 365 Approvals.
+    // const SUPERVISOR_FLOW_URL =
+    //  "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
@@ -79,25 +80,11 @@
 
         // Populate table rows
         data.forEach((item) => {
-          // Example property mapping based on your JSON:
-          // - ID: item.ID
-          // - Requester Name (Person field): item.RequesterName.DisplayName
-          // - Materials or Equipment: item.Materials_or_Equipment_Name
-          // - Quantity: item.Quantity
-          // - Unit: item.Unit
-          // - Proposal: item.Proposal or item.Proposal (depending on your actual JSON)
-          // - Link(s): item.LinkofMaterials_x002f_Equipment or item.Links_of_Materials_or_Equipment
-          // - Tracking: item.TheOrderTrackingURL or item.The_Order_Tracking_URL
-          // - Time: item.OrderSumbittedTime or item.Order_submitted_Time
-
+          // Create a table row for each item
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${item.ID || ""}</td>
-            <td>${
-              item.RequesterName
-                ? item.RequesterName.DisplayName
-                : ""
-            }</td>
+            <td>${item.RequesterName ? item.RequesterName.DisplayName : ""}</td>
             <td>${item.Materials_or_Equipment_Name || ""}</td>
             <td>${item.Quantity || ""}</td>
             <td>${item.Unit || ""}</td>
@@ -105,6 +92,8 @@
             <td>${item.Link_of_Materials_or_Equipment || ""}</td>
             <td>${item.The_Order_Tracking_URL || ""}</td>
             <td>${item.Order_submitted_Time || ""}</td>
+            <td>${item.Decision || ""}</td>
+            <!--
             <td>
               <button class="btn btn-sm btn-primary approveBtn">Approve</button>
               <button class="btn btn-sm btn-danger rejectBtn">Reject</button>
@@ -121,26 +110,30 @@
                 Submit
               </button>
             </td>
+            -->
           `;
           requestsTableBody.appendChild(row);
 
+          // The decision-making logic is commented out because decisions will be handled via Microsoft 365 Approvals.
+          /*
           // Approve/Reject Logic
           const approveBtn = row.querySelector(".approveBtn");
           const rejectBtn = row.querySelector(".rejectBtn");
           const rejectReasonInput = row.querySelector(".rejectReason");
           const submitRejectBtn = row.querySelector(".submitRejectBtn");
 
-          // Approve
+          // Approve action
           approveBtn.addEventListener("click", () => {
             handleApproval(item.ID, "Approved", "");
           });
 
-          // Reject
+          // Reject action: show input for rejection reason
           rejectBtn.addEventListener("click", () => {
             rejectReasonInput.style.display = "block";
             submitRejectBtn.style.display = "inline-block";
           });
 
+          // Submit rejection action with reason
           submitRejectBtn.addEventListener("click", () => {
             const reason = rejectReasonInput.value.trim();
             if (!reason) {
@@ -149,6 +142,7 @@
             }
             handleApproval(item.ID, "Rejected", reason);
           });
+          */
         });
       } catch (err) {
         console.error(err);
@@ -156,7 +150,8 @@
       }
     });
 
-    // Approve/Reject function
+    // Commented out: Approve/Reject function because decision making is now offloaded to Microsoft 365 Approvals.
+    /*
     async function handleApproval(orderId, status, rejectReason) {
       responseMessage.textContent = "";
       const payload = {
@@ -184,6 +179,7 @@
         responseMessage.textContent = `Error updating order #${orderId}.`;
       }
     }
+    */
   </script>
 </body>
 </html>
