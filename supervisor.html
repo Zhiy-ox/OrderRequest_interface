@@ -91,7 +91,13 @@
             <td>${item.Reason && item.Reason.Value || "No Proposal Provided"}</td>
             <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
             <td>${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
-            <td>${new Date(item.Order_submitted_Time).toLocaleString() || ""}</td>
+            <td>
+  ${
+    item.Order_submitted_Time
+      ? new Date(item.Order_submitted_Time).toLocaleString()
+      : ""
+  }
+</td>
             <td>${item.Decision?.Value || ""}</td>
             <!--
             <td>
