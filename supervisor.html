@@ -93,8 +93,8 @@
             <td>${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
             <td>
                 ${
-                    item.Order_submitted_Time
-                    ? new Date(item.Order_submitted_Time).toLocaleString("en-US", {
+                    item.Order_Submitted_Time
+                    ? new Date(item.Order_Submitted_Time).toLocaleString("en-US", {
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
