@@ -86,11 +86,11 @@
             <td>${item.ID || ""}</td>
             <td>${item.RequesterName ? item.RequesterName.DisplayName : ""}</td>
             <td>${item.Materials_or_Equipment_Name || ""}</td>
-            <td>${item.Quantity || ""}</td>
-            <td>${item.Unit || ""}</td>
-            <td>${item.Proposal || ""}</td>
-            <td>${item.Link_of_Materials_or_Equipment || ""}</td>
-            <td>${item.The_Order_Tracking_URL || ""}</td>
+            <td>${item.Quantity || "No quantity "}</td>
+            <td>${item.Unit || "No unit provided"}</td>
+            <td>${item.Proposal || "No Proposal Provided"}</td>
+            <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
+            <td>${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
             <td>${item.Order_submitted_Time || ""}</td>
             <td>${item.Decision?.Value || ""}</td>
             <!--
