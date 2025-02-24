@@ -92,7 +92,7 @@
             <td>${item.Link_of_Materials_or_Equipment || ""}</td>
             <td>${item.The_Order_Tracking_URL || ""}</td>
             <td>${item.Order_submitted_Time || ""}</td>
-            <td>${item.Decision || ""}</td>
+            <td>${item.Decision?.Value || ""}</td>
             <!--
             <td>
               <button class="btn btn-sm btn-primary approveBtn">Approve</button>
