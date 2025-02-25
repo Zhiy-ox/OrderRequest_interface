@@ -31,6 +31,8 @@
               <th>The Order Tracking URL</th>
               <th>Order Submitted Time</th>
               <th>Decision</th>
+              <th>Cost</th>
+              <th>Supply_Code</th>
             </tr>
           </thead>
           <tbody>
@@ -108,6 +110,8 @@
             </td>
 
             <td>${item.Decision?.Value || ""}</td>
+            <td>${item.Cost || "No cost provided"}</td>
+            <td>${item.Supply_Code || "No supply code provided"}</td>
             <!--
             <td>
               <button class="btn btn-sm btn-primary approveBtn">Approve</button>
