@@ -33,6 +33,7 @@
               <th>Decision</th>
               <th>Cost</th>
               <th>Supply_Code</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -55,10 +56,10 @@
     const LIST_FETCH_URL =
       "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
-    // 2) URL for supervisor approvals (Power Automate POST flow).
-    // Commented out because decision making will now be handled using Microsoft 365 Approvals.
-    // const SUPERVISOR_FLOW_URL =
-    //  "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // 2) URL for supervisor approvals (Power Automate POST flow) to update existing items.
+    // Replace with your actual Flow URL that updates an item in SharePoint
+    const UPDATE_FLOW_URL =
+      "https://YOUR-FLOW-ENDPOINT-URL";
 
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
@@ -72,9 +73,8 @@
         if (!res.ok) {
           throw new Error("Failed to fetch requests.");
         }
-        // The flow should return an array. In some cases, it might be { value: [ ... ] },
-        // so adjust accordingly if needed. For example, if your JSON is { "value": [ ... ] },
-        // you'd do: const data = (await res.json()).value;
+
+        // Adjust parsing if your JSON is in the structure: { "value": [...items...] }
         const data = await res.json();
 
         // Clear existing table rows
@@ -84,121 +84,127 @@
         data.forEach((item) => {
           // Create a table row for each item
           const row = document.createElement("tr");
+          // Store the ID in a data attribute so we can reference it later
+          row.setAttribute("data-id", item.ID || "");
+
+          // Convert date if it exists
+          const submittedTime = item.Order_Submitted_Time
+            ? new Date(item.Order_Submitted_Time).toLocaleString("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+              })
+            : "";
+
+          // Create row cells
           row.innerHTML = `
             <td>${item.ID || ""}</td>
             <td>${item.RequesterName ? item.RequesterName.DisplayName : ""}</td>
             <td>${item.Materials_or_Equipment_Name || ""}</td>
-            <td>${item.Quantity || "No quantity "}</td>
+            <td>${item.Quantity || "No quantity"}</td>
             <td>${item.Unit || "No unit provided"}</td>
-            <td>${item.Reason && item.Reason.Value || "No Proposal Provided"}</td>
+            <td>${(item.Reason && item.Reason.Value) || "No Proposal Provided"}</td>
             <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
-            <td>${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
-            <td>
-                ${
-                    item.Order_Submitted_Time
-                    ? new Date(item.Order_Submitted_Time).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                    hour12: true
-                })
-                : ""
-                  }
-            </td>
-
-            <td>${item.Decision?.Value || ""}</td>
+            <td class="trackingUrlCell">${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
+            <td>${submittedTime}</td>
+            <td class="decisionCell">${item.Decision?.Value || "No decision"}</td>
             <td>${item.Cost || "No cost provided"}</td>
             <td>${item.Supply_Code || "No supply code provided"}</td>
-            <!--
             <td>
-              <button class="btn btn-sm btn-primary approveBtn">Approve</button>
-              <button class="btn btn-sm btn-danger rejectBtn">Reject</button>
-              <input
-                type="text"
-                class="form-control mt-1 rejectReason"
-                style="display:none;"
-                placeholder="Reason for rejection"
-              />
-              <button
-                class="btn btn-sm btn-info submitRejectBtn mt-1"
-                style="display:none;"
-              >
-                Submit
-              </button>
+              <button class="btn btn-sm btn-primary editBtn">Edit</button>
+              <button class="btn btn-sm btn-success saveBtn" style="display:none;">Save</button>
             </td>
-            -->
           `;
           requestsTableBody.appendChild(row);
-
-          // The decision-making logic is commented out because decisions will be handled via Microsoft 365 Approvals.
-          /*
-          // Approve/Reject Logic
-          const approveBtn = row.querySelector(".approveBtn");
-          const rejectBtn = row.querySelector(".rejectBtn");
-          const rejectReasonInput = row.querySelector(".rejectReason");
-          const submitRejectBtn = row.querySelector(".submitRejectBtn");
-
-          // Approve action
-          approveBtn.addEventListener("click", () => {
-            handleApproval(item.ID, "Approved", "");
-          });
-
-          // Reject action: show input for rejection reason
-          rejectBtn.addEventListener("click", () => {
-            rejectReasonInput.style.display = "block";
-            submitRejectBtn.style.display = "inline-block";
-          });
-
-          // Submit rejection action with reason
-          submitRejectBtn.addEventListener("click", () => {
-            const reason = rejectReasonInput.value.trim();
-            if (!reason) {
-              alert("Please provide a reason for rejection.");
-              return;
-            }
-            handleApproval(item.ID, "Rejected", reason);
-          });
-          */
         });
+
+        // Attach event listeners AFTER rows are generated
+        addRowListeners();
       } catch (err) {
         console.error(err);
         responseMessage.textContent = "Error loading requests.";
       }
     });
 
-    // Commented out: Approve/Reject function because decision making is now offloaded to Microsoft 365 Approvals.
-    /*
-    async function handleApproval(orderId, status, rejectReason) {
-      responseMessage.textContent = "";
-      const payload = {
-        orderId: orderId,
-        approvalStatus: status,
-        rejectReason: rejectReason
-      };
+    // Function to add listeners to all Edit/Save buttons
+    function addRowListeners() {
+      const allRows = document.querySelectorAll("#requestsTable tbody tr");
 
-      try {
-        const res = await fetch(SUPERVISOR_FLOW_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
+      allRows.forEach((row) => {
+        const editBtn = row.querySelector(".editBtn");
+        const saveBtn = row.querySelector(".saveBtn");
+
+        // On Edit: Turn the relevant fields into input boxes
+        editBtn.addEventListener("click", () => {
+          const trackingCell = row.querySelector(".trackingUrlCell");
+          const decisionCell = row.querySelector(".decisionCell");
+
+          // Convert text to input fields
+          const currentTrackingUrl = trackingCell.textContent.trim();
+          const currentDecision = decisionCell.textContent.trim();
+
+          trackingCell.innerHTML = `<input type="text" class="form-control" value="${currentTrackingUrl}" />`;
+          decisionCell.innerHTML = `<input type="text" class="form-control" value="${currentDecision}" />`;
+
+          // Show/hide buttons
+          editBtn.style.display = "none";
+          saveBtn.style.display = "inline-block";
         });
 
-        if (!res.ok) {
-          throw new Error("Approval request failed.");
-        }
-        const result = await res.json();
-        responseMessage.textContent = `Order #${orderId} was updated to "${status}".`;
-      } catch (err) {
-        console.error(err);
-        responseMessage.textContent = `Error updating order #${orderId}.`;
-      }
+        // On Save: Collect input values and send to Flow
+        saveBtn.addEventListener("click", async () => {
+          const trackingCell = row.querySelector(".trackingUrlCell");
+          const decisionCell = row.querySelector(".decisionCell");
+
+          // Grab the new values from the input fields
+          const newTrackingUrl = trackingCell.querySelector("input").value.trim();
+          const newDecision = decisionCell.querySelector("input").value.trim();
+
+          // Retrieve the ID from the data attribute
+          const rowId = row.getAttribute("data-id");
+
+          try {
+            responseMessage.textContent = "Updating the item...";
+
+            // Build payload for your Update Flow
+            const payload = {
+              ID: rowId,
+              The_Order_Tracking_URL: newTrackingUrl,
+              Decision: newDecision
+              // Add more fields as needed
+            };
+
+            const res = await fetch(UPDATE_FLOW_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+              throw new Error(`Update request failed with status ${res.status}`);
+            }
+
+            responseMessage.textContent = `Item #${rowId} updated successfully.`;
+
+            // Update the table cell displays
+            trackingCell.textContent = newTrackingUrl || "Please insert Tracking URL";
+            decisionCell.textContent = newDecision || "No decision";
+
+            // Show/hide buttons
+            row.querySelector(".editBtn").style.display = "inline-block";
+            saveBtn.style.display = "none";
+
+          } catch (error) {
+            console.error(error);
+            responseMessage.textContent = `Error updating item #${rowId}: ${error.message}`;
+          }
+        });
+      });
     }
-    */
   </script>
 </body>
 </html>
