@@ -18,7 +18,29 @@
         <!-- Button to load requests from SharePoint (or a Flow that fetches from SharePoint) -->
         <button id="loadBtn" class="btn btn-success mb-3">Load Requests</button>
 
-        <table class="table table-bordered table-striped" id="requestsTable">
+        <!-- Enforce column widths using colgroup + table-layout:fixed -->
+        <table
+          class="table table-bordered table-striped"
+          id="requestsTable"
+          style="table-layout: fixed; width: 100%;"
+        >
+          <colgroup>
+            <!-- Adjust these widths as needed -->
+            <col style="width: 50px;" />   <!-- ID -->
+            <col style="width: 150px;" />  <!-- Requester Name -->
+            <col style="width: 200px;" />  <!-- Materials/Equipment Name -->
+            <col style="width: 80px;" />   <!-- Quantity -->
+            <col style="width: 80px;" />   <!-- Unit -->
+            <col style="width: 200px;" />  <!-- Reason -->
+            <col style="width: 200px;" />  <!-- Links of Materials or Equipment -->
+            <col style="width: 200px;" />  <!-- The Order Tracking URL -->
+            <col style="width: 160px;" />  <!-- Order Submitted Time -->
+            <col style="width: 120px;" />  <!-- Decision -->
+            <col style="width: 80px;" />   <!-- Cost -->
+            <col style="width: 120px;" />  <!-- Supply_Code -->
+            <col style="width: 100px;" />  <!-- Actions -->
+          </colgroup>
+
           <thead class="table-dark">
             <tr>
               <th>ID</th>
@@ -26,13 +48,13 @@
               <th>Materials or Equipment Name</th>
               <th>Quantity</th>
               <th>Unit</th>
-              <th>          Reason          </th>
-              <th>    Links of Materials or Equipment    </th>
-              <th>       The Order Tracking URL       </th>
+              <th>Reason</th>
+              <th>Links of Materials or Equipment</th>
+              <th>The Order Tracking URL</th>
               <th>Order Submitted Time</th>
-              <th>   Decision   </th>
+              <th>Decision</th>
               <th>Cost</th>
-              <th>     Supply_Code     </th>
+              <th>Supply_Code</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -46,7 +68,7 @@
     </div>
   </div>
 
- <!-- Optional Bootstrap JS -->
+  <!-- Optional Bootstrap JS -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
   ></script>
@@ -58,7 +80,7 @@
 
     // 2) URL for supervisor approvals (Power Automate POST flow) to update existing items.
     // Replace with your actual Flow URL that updates an item in SharePoint
-    const UPDATE_FLOW_URL = "https://YOUR-FLOW-ENDPOINT-URL";
+    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
 
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
@@ -155,7 +177,7 @@
           // Convert the decision cell to a dropdown
           let selectHtml = `<select class="form-select">`;
           possibleDecisions.forEach((option) => {
-            const selected = (option === currentDecision) ? "selected" : "";
+            const selected = option === currentDecision ? "selected" : "";
             selectHtml += `<option value="${option}" ${selected}>${option}</option>`;
           });
           selectHtml += `</select>`;
