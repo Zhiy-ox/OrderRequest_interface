@@ -25,20 +25,19 @@
           style="table-layout: fixed; width: 100%;"
         >
           <colgroup>
-            <!-- Adjust these widths as needed -->
-            <col style="width: 50px;" />   <!-- ID -->
-            <col style="width: 150px;" />  <!-- Requester Name -->
-            <col style="width: 200px;" />  <!-- Materials/Equipment Name -->
-            <col style="width: 80px;" />   <!-- Quantity -->
-            <col style="width: 80px;" />   <!-- Unit -->
-            <col style="width: 400px;" />  <!-- Reason -->
-            <col style="width: 200px;" />  <!-- Links of Materials or Equipment -->
-            <col style="width: 200px;" />  <!-- The Order Tracking URL -->
-            <col style="width: 160px;" />  <!-- Order Submitted Time -->
-            <col style="width: 150px;" />  <!-- Decision -->
-            <col style="width: 80px;" />   <!-- Cost -->
-            <col style="width: 120px;" />  <!-- Supply_Code -->
-            <col style="width: 100px;" />  <!-- Actions -->
+            <col style="width: 50px;" />
+            <col style="width: 150px;" />
+            <col style="width: 200px;" />
+            <col style="width: 80px;" />
+            <col style="width: 80px;" />
+            <col style="width: 400px;" />
+            <col style="width: 200px;" />
+            <col style="width: 200px;" />
+            <col style="width: 160px;" />
+            <col style="width: 150px;" />
+            <col style="width: 80px;" />
+            <col style="width: 120px;" />
+            <col style="width: 100px;" />
           </colgroup>
 
           <thead class="table-dark">
@@ -86,7 +85,7 @@
     const requestsTableBody = document.querySelector("#requestsTable tbody");
     const responseMessage = document.getElementById("responseMessage");
 
-    // Possible decisions for the dropdown
+    // Possible decisions for the dropdown (and for custom sorting)
     const possibleDecisions = ["Undecided", "Followup", "Finished", "Ordered", "Denied", "Approved"];
 
     // Load existing requests from your flow/SharePoint
@@ -100,6 +99,24 @@
 
         // Adjust parsing if your JSON is in the structure: { "value": [...items...] }
         const data = await res.json();
+
+        // Sort the items by Decision, based on the order in possibleDecisions
+        data.sort((a, b) => {
+          // Convert the Decision to something we can compare
+          const decisionA = a.Decision?.Value || "Undecided";
+          const decisionB = b.Decision?.Value || "Undecided";
+
+          // Compare the index of each decision in possibleDecisions
+          const indexA = possibleDecisions.indexOf(decisionA);
+          const indexB = possibleDecisions.indexOf(decisionB);
+
+          // If a decision is not in the array, indexOf returns -1
+          // We can treat that as last in order
+          const safeIndexA = (indexA === -1) ? possibleDecisions.length : indexA;
+          const safeIndexB = (indexB === -1) ? possibleDecisions.length : indexB;
+
+          return safeIndexA - safeIndexB;
+        });
 
         // Clear existing table rows
         requestsTableBody.innerHTML = "";
@@ -171,13 +188,13 @@
           const currentTrackingUrl = trackingCell.textContent.trim();
           const currentDecision = decisionCell.textContent.trim();
 
-          // Convert the tracking URL to a text input
+          // Convert the tracking URL cell to a text input
           trackingCell.innerHTML = `<input type="text" class="form-control" value="${currentTrackingUrl}" />`;
 
           // Convert the decision cell to a dropdown
           let selectHtml = `<select class="form-select">`;
           possibleDecisions.forEach((option) => {
-            const selected = option === currentDecision ? "selected" : "";
+            const selected = (option === currentDecision) ? "selected" : "";
             selectHtml += `<option value="${option}" ${selected}>${option}</option>`;
           });
           selectHtml += `</select>`;
