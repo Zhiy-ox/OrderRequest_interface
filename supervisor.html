@@ -157,7 +157,7 @@
             <td>${item.Materials_or_Equipment_Name || ""}</td>
             <td>${item.Quantity || "No quantity"}</td>
             <td>${item.Unit || "No unit provided"}</td>
-            <td class="preserve-lines">${(item.Reason && item.Reason.Value) || "No Proposal Provided"}</td>
+            <td class="preserve-lines">${item.Reason || "No Proposal Provided"}</td>
             <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
             <td class="trackingUrlCell">${item.The_Order_Tracking_URL || ""}</td>
             <td>${submittedTime}</td>
