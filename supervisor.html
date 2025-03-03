@@ -7,6 +7,16 @@
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
   />
+  <style>
+    /* 
+      This class ensures that newline characters 
+      in plain text are displayed as actual line breaks.
+    */
+    .preserve-lines {
+      white-space: pre-wrap;  /* preserve newlines and wrap text */
+      word-wrap: break-word;  /* allow long lines to wrap within the cell */
+    }
+  </style>
 </head>
 <body class="bg-light">
   <div class="container py-5">
@@ -102,18 +112,14 @@
 
         // Sort the items by Decision, based on the order in possibleDecisions
         data.sort((a, b) => {
-          // Convert the Decision to something we can compare
           const decisionA = a.Decision?.Value || "Undecided";
           const decisionB = b.Decision?.Value || "Undecided";
 
-          // Compare the index of each decision in possibleDecisions
           const indexA = possibleDecisions.indexOf(decisionA);
           const indexB = possibleDecisions.indexOf(decisionB);
 
-          // If a decision is not in the array, indexOf returns -1
-          // We can treat that as last in order
-          const safeIndexA = (indexA === -1) ? possibleDecisions.length : indexA;
-          const safeIndexB = (indexB === -1) ? possibleDecisions.length : indexB;
+          const safeIndexA = indexA === -1 ? possibleDecisions.length : indexA;
+          const safeIndexB = indexB === -1 ? possibleDecisions.length : indexB;
 
           return safeIndexA - safeIndexB;
         });
@@ -125,7 +131,6 @@
         data.forEach((item) => {
           // Create a table row for each item
           const row = document.createElement("tr");
-          // Store the ID in a data attribute so we can reference it later
           row.setAttribute("data-id", item.ID || "");
 
           // Convert date if it exists
@@ -141,14 +146,16 @@
               })
             : "";
 
-          // Create row cells
-          row.innerHTML = `
+          // Build each cell
+          // For the "Reason" column, we apply a class "preserve-lines"
+          // so multi-line text is displayed as-is, with line breaks.
+          const rowHtml = `
             <td>${item.ID || ""}</td>
             <td>${item.RequesterName ? item.RequesterName.DisplayName : ""}</td>
             <td>${item.Materials_or_Equipment_Name || ""}</td>
             <td>${item.Quantity || "No quantity"}</td>
             <td>${item.Unit || "No unit provided"}</td>
-            <td>${(item.Reason && item.Reason.Value) || "No Proposal Provided"}</td>
+            <td class="preserve-lines">${(item.Reason && item.Reason.Value) || "No Proposal Provided"}</td>
             <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
             <td class="trackingUrlCell">${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
             <td>${submittedTime}</td>
@@ -160,6 +167,8 @@
               <button class="btn btn-sm btn-success saveBtn" style="display:none;">Save</button>
             </td>
           `;
+          row.innerHTML = rowHtml;
+
           requestsTableBody.appendChild(row);
         });
 
@@ -179,7 +188,7 @@
         const editBtn = row.querySelector(".editBtn");
         const saveBtn = row.querySelector(".saveBtn");
 
-        // On Edit: Turn the relevant fields into editable form controls
+        // On Edit: Turn certain fields into editable form controls
         editBtn.addEventListener("click", () => {
           const trackingCell = row.querySelector(".trackingUrlCell");
           const decisionCell = row.querySelector(".decisionCell");
@@ -194,7 +203,7 @@
           // Convert the decision cell to a dropdown
           let selectHtml = `<select class="form-select">`;
           possibleDecisions.forEach((option) => {
-            const selected = (option === currentDecision) ? "selected" : "";
+            const selected = option === currentDecision ? "selected" : "";
             selectHtml += `<option value="${option}" ${selected}>${option}</option>`;
           });
           selectHtml += `</select>`;
@@ -210,7 +219,7 @@
           const trackingCell = row.querySelector(".trackingUrlCell");
           const decisionCell = row.querySelector(".decisionCell");
 
-          // Grab the new values from the form controls
+          // New values from the form controls
           const newTrackingUrl = trackingCell.querySelector("input").value.trim();
           const newDecision = decisionCell.querySelector("select").value.trim();
 
@@ -240,7 +249,7 @@
 
             responseMessage.textContent = `Item #${rowId} updated successfully.`;
 
-            // Update the table cell displays (now plain text again)
+            // Update the table cell displays (plain text again)
             trackingCell.textContent = newTrackingUrl || "Please insert Tracking URL";
             decisionCell.textContent = newDecision || "Undecided";
 
