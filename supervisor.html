@@ -46,6 +46,7 @@
             <col style="width: 160px;" />
             <col style="width: 150px;" />
             <col style="width: 80px;" />
+            <col style="width: 80px;" />
             <col style="width: 120px;" />
             <col style="width: 100px;" />
           </colgroup>
@@ -63,6 +64,7 @@
               <th>Order Submitted Time</th>
               <th>Decision</th>
               <th>Cost</th>
+              <th>Currency</th>
               <th>Supply_Code</th>
               <th>Actions</th>
             </tr>
@@ -157,10 +159,11 @@
             <td>${item.Unit || "No unit provided"}</td>
             <td class="preserve-lines">${(item.Reason && item.Reason.Value) || "No Proposal Provided"}</td>
             <td>${item.Link_of_Materials_or_Equipment || "No Link Provided"}</td>
-            <td class="trackingUrlCell">${item.The_Order_Tracking_URL || "Please insert Tracking URL"}</td>
+            <td class="trackingUrlCell">${item.The_Order_Tracking_URL || ""}</td>
             <td>${submittedTime}</td>
             <td class="decisionCell">${item.Decision?.Value || "Undecided"}</td>
             <td>${item.Cost || "No cost provided"}</td>
+            <td>${item.Currency || ""}</td>
             <td>${item.Supply_Code || "No supply code provided"}</td>
             <td>
               <button class="btn btn-sm btn-primary editBtn">Edit</button>
