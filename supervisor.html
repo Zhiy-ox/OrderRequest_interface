@@ -46,7 +46,7 @@
             <col style="width: 80px;" />
             <col style="width: 120px;" />
             <col style="width: 200px;" />
-            <col style="width: 200px;" /> <!-- NEW: Attachments column -->
+            <col style="width: 100px;" /> <!-- NEW: Attachments column -->
             <col style="width: 100px;" />
           </colgroup>
 
@@ -85,10 +85,10 @@
 
   <script>
     // 1) URL that returns the JSON array of orders (Power Automate GET flow)
-    const LIST_FETCH_URL = "YOUR_FLOW_URL_FOR_GET_HERE";
+    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
 
     // 2) URL for supervisor approvals (Power Automate POST flow) to update existing items
-    const UPDATE_FLOW_URL = "YOUR_FLOW_URL_FOR_POST_HERE";
+    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
 
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
