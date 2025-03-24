@@ -49,6 +49,7 @@
             <col style="width: 80px;" />
             <col style="width: 120px;" />
             <col style="width: 200px;" /> <!-- NEW: Comments by Supervisor column -->
+            <col style="width: 100px;" /> <!-- Attachments column -->
             <col style="width: 100px;" />
           </colgroup>
 
@@ -68,6 +69,7 @@
               <th>Currency</th>
               <th>Supply_Code</th>
               <th>Comments by Supervisor</th> <!-- NEW -->
+              <th>Attachments</th> <!-- NEW column -->
               <th>Actions</th>
             </tr>
           </thead>
@@ -168,6 +170,7 @@
             <td>${item.Currency || ""}</td>
             <td>${item.Supply_Code || "No supply code provided"}</td>
             <td class="commentsCell">${item.Comments_by_Supervisor || ""}</td> <!-- NEW -->
+            <td class="attachmentsCell">${attachmentsHtml}</td> <!-- NEW attachments column -->
             <td>
               <button class="btn btn-sm btn-primary editBtn">Edit</button>
               <button class="btn btn-sm btn-success saveBtn" style="display:none;">Save</button>
