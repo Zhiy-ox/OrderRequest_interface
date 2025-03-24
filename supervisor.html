@@ -48,6 +48,7 @@
             <col style="width: 80px;" />
             <col style="width: 80px;" />
             <col style="width: 120px;" />
+            <col style="width: 200px;" /> <!-- NEW: Comments by Supervisor column -->
             <col style="width: 100px;" />
           </colgroup>
 
@@ -66,6 +67,7 @@
               <th>Cost</th>
               <th>Currency</th>
               <th>Supply_Code</th>
+              <th>Comments by Supervisor</th> <!-- NEW -->
               <th>Actions</th>
             </tr>
           </thead>
@@ -165,6 +167,7 @@
             <td>${item.Cost || "No cost provided"}</td>
             <td>${item.Currency || ""}</td>
             <td>${item.Supply_Code || "No supply code provided"}</td>
+            <td class="commentsCell">${item.Comments_by_Supervisor || ""}</td> <!-- NEW -->
             <td>
               <button class="btn btn-sm btn-primary editBtn">Edit</button>
               <button class="btn btn-sm btn-success saveBtn" style="display:none;">Save</button>
@@ -195,10 +198,12 @@
         editBtn.addEventListener("click", () => {
           const trackingCell = row.querySelector(".trackingUrlCell");
           const decisionCell = row.querySelector(".decisionCell");
+          const commentsCell = row.querySelector(".commentsCell"); // NEW
 
           // Current values
           const currentTrackingUrl = trackingCell.textContent.trim();
           const currentDecision = decisionCell.textContent.trim();
+          const currentComments = commentsCell.textContent.trim(); // NEW
 
           // Convert the tracking URL cell to a text input
           trackingCell.innerHTML = `<input type="text" class="form-control" value="${currentTrackingUrl}" />`;
@@ -212,6 +217,9 @@
           selectHtml += `</select>`;
           decisionCell.innerHTML = selectHtml;
 
+          // Convert the comments cell to a textarea (multi-line field)
+          commentsCell.innerHTML = `<textarea class="form-control" rows="3">${currentComments}</textarea>`; // NEW
+
           // Show/hide buttons
           editBtn.style.display = "none";
           saveBtn.style.display = "inline-block";
@@ -221,10 +229,12 @@
         saveBtn.addEventListener("click", async () => {
           const trackingCell = row.querySelector(".trackingUrlCell");
           const decisionCell = row.querySelector(".decisionCell");
+          const commentsCell = row.querySelector(".commentsCell"); // NEW
 
           // New values from the form controls
           const newTrackingUrl = trackingCell.querySelector("input").value.trim();
           const newDecision = decisionCell.querySelector("select").value.trim();
+          const newComments = commentsCell.querySelector("textarea").value.trim(); // NEW
 
           // Retrieve the ID from the data attribute
           const rowId = row.getAttribute("data-id");
@@ -236,7 +246,8 @@
             const payload = {
               ID: rowId,
               The_Order_Tracking_URL: newTrackingUrl,
-              Decision: newDecision
+              Decision: newDecision,
+              Comments_by_Supervisor: newComments // NEW
               // Add more fields as needed
             };
 
@@ -255,6 +266,7 @@
             // Update the table cell displays (plain text again)
             trackingCell.textContent = newTrackingUrl || "Please insert Tracking URL";
             decisionCell.textContent = newDecision || "Undecided";
+            commentsCell.textContent = newComments || "";
 
             // Show/hide buttons
             row.querySelector(".editBtn").style.display = "inline-block";
