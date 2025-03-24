@@ -8,10 +8,10 @@
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
   />
   <style>
-    /* Preserves line breaks for multi-line text fields */
+    /* This class ensures newline characters in plain text become line breaks. */
     .preserve-lines {
-      white-space: pre-wrap;  
-      word-wrap: break-word;  
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
   </style>
 </head>
@@ -22,10 +22,9 @@
         <h2>Supervisor Dashboard</h2>
         <p>Review the order requests (with attachments).</p>
 
-        <!-- Button to load requests from SharePoint (or a Flow that fetches from SharePoint) -->
+        <!-- Button to load requests from Power Automate/SharePoint -->
         <button id="loadBtn" class="btn btn-success mb-3">Load Requests</button>
 
-        <!-- Enforce column widths using colgroup + table-layout:fixed -->
         <table
           class="table table-bordered table-striped"
           id="requestsTable"
@@ -46,7 +45,7 @@
             <col style="width: 80px;" />
             <col style="width: 120px;" />
             <col style="width: 200px;" />
-            <col style="width: 100px;" /> <!-- NEW: Attachments column -->
+            <col style="width: 100px;" /> <!-- Attachments column -->
             <col style="width: 100px;" />
           </colgroup>
 
@@ -66,7 +65,7 @@
               <th>Currency</th>
               <th>Supply_Code</th>
               <th>Comments by Supervisor</th>
-              <th>Attachments</th> <!-- NEW -->
+              <th>Attachments</th> <!-- NEW column -->
               <th>Actions</th>
             </tr>
           </thead>
@@ -81,20 +80,23 @@
   </div>
 
   <!-- Optional Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
 
   <script>
-    // 1) URL that returns the JSON array of orders (Power Automate GET flow)
-    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // ---------------------------------------------------------
+    // 1) URLs for fetching data and updating items
+    // ---------------------------------------------------------
+    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";  // e.g. "https://.../invoke?..."
+    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // e.g. "https://.../invoke?..."
 
-    // 2) URL for supervisor approvals (Power Automate POST flow) to update existing items
-    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
-
+    // DOM references
     const loadBtn = document.getElementById("loadBtn");
     const requestsTableBody = document.querySelector("#requestsTable tbody");
     const responseMessage = document.getElementById("responseMessage");
 
-    // Possible decisions for the dropdown
+    // Potential decisions for the "Decision" field
     const possibleDecisions = [
       "Undecided",
       "Followup",
@@ -104,26 +106,47 @@
       "Approved"
     ];
 
-    // Load existing requests from your GET flow/SharePoint
+    // ---------------------------------------------------------
+    // 2) Helper function to build attachment links
+    // ---------------------------------------------------------
+    /**
+     * Convert an array of attachments (Name, Url) into
+     * a string of hyperlinks (one per line).
+     */
+    function buildAttachmentsHyperlinks(attachments) {
+      if (!attachments || attachments.length === 0) {
+        return "No attachments";
+      }
+      // Create an <a> tag for each attachment
+      const links = attachments.map(att => {
+        return `<a href="${att.Url}" target="_blank">${att.Name}</a>`;
+      });
+      // Join with a <br/> to have each link on its own line
+      return links.join("<br/>");
+    }
+
+    // ---------------------------------------------------------
+    // 3) Load and display existing requests
+    // ---------------------------------------------------------
     loadBtn.addEventListener("click", async () => {
-      responseMessage.textContent = "";
+      responseMessage.textContent = ""; // Clear old messages
       try {
         const res = await fetch(LIST_FETCH_URL);
         if (!res.ok) {
-          throw new Error("Failed to fetch requests.");
+          throw new Error(`Failed to fetch requests. Status code: ${res.status}`);
         }
 
-        // If your Flow returns { "value": [...] }, grab the .value
+        // If your Flow returns { "value": [ ... ] }, parse accordingly
         const dataObj = await res.json();
-        // dataObj might be { "value": [ {...}, {...} ] }
-        const data = dataObj.value || [];
+        const data = dataObj.value || [];  // e.g. { "value": [...] }
 
-        // Sort items by Decision
+        // Sort the items by Decision
         data.sort((a, b) => {
           const decisionA = a.Decision?.Value || "Undecided";
           const decisionB = b.Decision?.Value || "Undecided";
           const indexA = possibleDecisions.indexOf(decisionA);
           const indexB = possibleDecisions.indexOf(decisionB);
+          // If not found, push to end
           const safeA = indexA === -1 ? possibleDecisions.length : indexA;
           const safeB = indexB === -1 ? possibleDecisions.length : indexB;
           return safeA - safeB;
@@ -133,15 +156,15 @@
         requestsTableBody.innerHTML = "";
 
         // Populate table rows
-        data.forEach((item) => {
+        data.forEach(item => {
           const row = document.createElement("tr");
           row.setAttribute("data-id", item.ID || "");
 
-          // Format date if it exists
+          // Format the submission time if it exists
           let submittedTime = "";
-          if (item.Order_submitted_Time) {
-            const dateObj = new Date(item.Order_submitted_Time);
-            submittedTime = dateObj.toLocaleString("en-US", {
+          if (item.Order_Submitted_Time) {
+            const dt = new Date(item.Order_Submitted_Time);
+            submittedTime = dt.toLocaleString("en-US", {
               year: "numeric",
               month: "2-digit",
               day: "2-digit",
@@ -153,17 +176,12 @@
           }
 
           // Build attachments HTML
-          let attachmentsHtml = "No attachments";
-          if (item.Attachments && Array.isArray(item.Attachments) && item.Attachments.length > 0) {
-            attachmentsHtml = item.Attachments
-              .map((att) => `<a href="${att.Url}" target="_blank">${att.Name}</a>`)
-              .join("<br/>");
-          }
+          const attachmentsHtml = buildAttachmentsHyperlinks(item.Attachments);
 
-          // Construct each cell
+          // Construct the row's inner HTML
           const rowHtml = `
             <td>${item.ID || ""}</td>
-            <td>${item.Requester_Name?.DisplayName || ""}</td>
+            <td>${item.RequesterName?.DisplayName || ""}</td>
             <td>${item.Materials_or_Equipment_Name || ""}</td>
             <td>${item.Quantity ?? "No quantity"}</td>
             <td>${item.Unit || "No unit provided"}</td>
@@ -176,17 +194,17 @@
             <td>${item.Currency || ""}</td>
             <td>${item.Supply_Code || "No supply code provided"}</td>
             <td class="commentsCell">${item.Comments_by_Supervisor || ""}</td>
-            <td class="attachmentsCell">${attachmentsHtml}</td>
+            <td class="attachmentsCell">${attachmentsHtml}</td> <!-- NEW attachments column -->
             <td>
               <button class="btn btn-sm btn-primary editBtn">Edit</button>
               <button class="btn btn-sm btn-success saveBtn" style="display:none;">Save</button>
             </td>
           `;
-
           row.innerHTML = rowHtml;
           requestsTableBody.appendChild(row);
         });
 
+        // Attach event listeners for Edit/Save after creating rows
         addRowListeners();
       } catch (err) {
         console.error(err);
@@ -194,11 +212,12 @@
       }
     });
 
-    // Attach Edit/Save event listeners for each row
+    // ---------------------------------------------------------
+    // 4) Add listeners to Edit/Save buttons
+    // ---------------------------------------------------------
     function addRowListeners() {
       const allRows = document.querySelectorAll("#requestsTable tbody tr");
-
-      allRows.forEach((row) => {
+      allRows.forEach(row => {
         const editBtn = row.querySelector(".editBtn");
         const saveBtn = row.querySelector(".saveBtn");
 
@@ -212,21 +231,22 @@
           const currentDecision = decisionCell.textContent.trim();
           const currentComments = commentsCell.textContent.trim();
 
-          // Convert the tracking URL cell to a text input
+          // Convert tracking URL to an input
           trackingCell.innerHTML = `<input type="text" class="form-control" value="${currentTrackingUrl}" />`;
 
-          // Convert the decision cell to a dropdown
+          // Convert decision to a dropdown
           let selectHtml = `<select class="form-select">`;
-          possibleDecisions.forEach((option) => {
-            const selected = option === currentDecision ? "selected" : "";
-            selectHtml += `<option value="${option}" ${selected}>${option}</option>`;
+          possibleDecisions.forEach(dec => {
+            const selected = dec === currentDecision ? "selected" : "";
+            selectHtml += `<option value="${dec}" ${selected}>${dec}</option>`;
           });
           selectHtml += `</select>`;
           decisionCell.innerHTML = selectHtml;
 
-          // Convert the comments cell to a textarea
+          // Convert comments to a textarea
           commentsCell.innerHTML = `<textarea class="form-control" rows="3">${currentComments}</textarea>`;
 
+          // Toggle buttons
           editBtn.style.display = "none";
           saveBtn.style.display = "inline-block";
         });
@@ -236,24 +256,27 @@
           const decisionCell = row.querySelector(".decisionCell");
           const commentsCell = row.querySelector(".commentsCell");
 
-          // Get new values
+          // Grab new values
           const newTrackingUrl = trackingCell.querySelector("input").value.trim();
           const newDecision = decisionCell.querySelector("select").value.trim();
           const newComments = commentsCell.querySelector("textarea").value.trim();
 
+          // Row ID
           const rowId = row.getAttribute("data-id");
 
           try {
-            responseMessage.textContent = "Updating item...";
+            responseMessage.textContent = "Updating the item...";
 
+            // Build payload for your Update Flow
             const payload = {
               ID: rowId,
               The_Order_Tracking_URL: newTrackingUrl,
               Decision: newDecision,
               Comments_by_Supervisor: newComments
-              // Add more fields if needed
+              // Add more fields if your flow expects them
             };
 
+            // POST to the update flow
             const res = await fetch(UPDATE_FLOW_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -265,11 +288,12 @@
 
             responseMessage.textContent = `Item #${rowId} updated successfully.`;
 
-            // Revert cells to plain text
+            // Revert the cells to plain text
             trackingCell.textContent = newTrackingUrl || "Please insert Tracking URL";
             decisionCell.textContent = newDecision || "Undecided";
             commentsCell.textContent = newComments || "";
 
+            // Toggle buttons
             editBtn.style.display = "inline-block";
             saveBtn.style.display = "none";
           } catch (error) {
