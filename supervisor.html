@@ -1,289 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- 
-  Redesigned Supervisor Dashboard for Order Review
-  - Preserves original data loading (via LIST_FETCH_URL) and update (via UPDATE_FLOW_URL) functionality.
-  - Uses Bootstrap 5 for modern styling (navbar, card layout, table, form elements).
-  - Includes AOS (Animate on Scroll) library for row fade-in animations.
-  - All columns and inline editing (Tracking URL, Decision, Comments) are retained.
-  - No frameworks or build tools required; just HTML, CSS, and JS with CDN resources.
+<!--  
+  Modernised Supervisor Dashboard (full‑field version)
+  ‑ All original columns preserved and functional.
+  ‑ Inline editing for Tracking URL, Decision, and Comments.
+  ‑ Uses Bootstrap 5, Bootstrap Icons, and AOS (Animate‑on‑Scroll) for VFX.
+  ‑ No build tools or frameworks required; plug‑and‑play HTML file.
 -->
 <head>
   <meta charset="UTF-8" />
-  <title>Order Review Dashboard</title>
-  <!-- Bootstrap 5 CSS (CDN) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <!-- Bootstrap Icons (for action button icon) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <!-- AOS CSS for animation effects -->
+  <title>Supervisor Order Review Dashboard</title>
+  <!-- Bootstrap 5 CSS (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <!-- AOS CSS (animations) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
   <style>
-    /* Global styles */
-    body {
-      background-color: #f8f9fa; /* Light gray background for contrast */
-    }
-    /* Container for dashboard content */
-    .dashboard-container {
-      padding: 2rem;
-    }
-    /* Card styling for the table container */
-    .card {
-      border: none;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Subtle drop shadow */
-    }
-    /* Table styling */
-    .table thead th {
-      background-color: #e9ecef; /* Light background for header */
-      border-bottom: 2px solid #dee2e6;
-    }
-    .table-hover tbody tr {
-      transition: background-color 0.2s ease;
-    }
-    .table-hover tbody tr:hover {
-      background-color: #f1f5f9; /* Slightly darker hover highlight */
-    }
-    /* Form elements styling (Bootstrap .form-control and .form-select classes used) */
-    .form-control:focus, .form-select:focus {
-      box-shadow: none; /* Remove default focus shadow for cleaner look */
-      border-color: #86b7fe; /* Keep a subtle border highlight on focus */
-    }
-    /* Update button styling */
-    .btn-submit {
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .btn-submit:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    .btn-submit:active {
-      transform: translateY(0);
-      box-shadow: none;
-    }
+    body { background-color:#f6f8fa; }
+    .dashboard-container { padding:2rem; }
+
+    .card { border:none; border-radius:.7rem; box-shadow:0 3px 10px rgba(0,0,0,0.08); }
+
+    /* table tweaks */
+    table thead th { background:#e9ecef; border-bottom:2px solid #dee2e6; }
+    table tbody tr { transition:background .18s ease; }
+    table tbody tr:hover { background:#f1f5f9; }
+
+    /* preserve multiline text (Reason column) */
+    .preserve-lines { white-space:pre-wrap; word-wrap:break-word; }
+
+    /* animated action button */
+    .btn-submit { transition:transform .2s, box-shadow .2s; }
+    .btn-submit:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,.15); }
+    .btn-submit:active { transform:none; box-shadow:none; }
   </style>
 </head>
 <body>
-  <!-- Navigation bar -->
+  <!-- Top navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container-fluid">
-      <span class="navbar-brand">Order Review Dashboard</span>
+      <span class="navbar-brand">Supervisor Dashboard</span>
     </div>
   </nav>
 
   <div class="container-fluid dashboard-container">
-    <h2 class="mb-4">Orders for Review</h2>
-    <!-- Card container for the orders table -->
+    <h2 class="mb-4">Order Requests</h2>
     <div class="card">
       <div class="card-body">
-        <table class="table table-striped table-hover align-middle">
-          <thead>
-            <tr>
-              <!-- Table column headers (preserved from original, with possible additions) -->
-              <th>Order #</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Tracking URL</th>
-              <th>Decision</th>
-              <th>Supervisor Comments</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="orders-table-body">
-            <!-- Loading indicator row (shown until data is fetched) -->
-            <tr id="loading-row">
-              <td colspan="7" class="text-center">
-                <div class="spinner-border text-secondary" role="status">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <span class="ms-2">Loading orders...</span>
-              </td>
-            </tr>
-            <!-- Order rows will be inserted here by the script -->
-          </tbody>
-        </table>
+        <div class="table-responsive" style="max-height:80vh;">
+          <table class="table table-striped table-hover align-middle" id="requestsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Requester Name</th>
+                <th>Materials / Equipment Name</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Reason</th>
+                <th>Links</th>
+                <th>Tracking URL</th>
+                <th>Submitted Time</th>
+                <th>Decision</th>
+                <th>Cost</th>
+                <th>Currency</th>
+                <th>Supply Code</th>
+                <th>Comments</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="requestsBody">
+              <tr id="loadingRow">
+                <td colspan="15" class="text-center py-4">
+                  <div class="spinner-border text-secondary" role="status"></div>
+                  <span class="ms-2">Loading orders…</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- AOS Animation library JS (CDN) -->
+  <!-- AOS & Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-  <!-- (Optional) Bootstrap Bundle JS for any interactive components (not required for current functionality) -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Configuration: URLs for fetching and updating data (Power Automate endpoints)
-    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";   // GET orders data
-    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo"; // POST updates
+    // 1) Fetch URL (GET)
+    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    // 2) Update URL (POST)
+    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
 
-    // Create a table row element for a given order object
-    function createOrderRow(order) {
-      const tr = document.createElement('tr');
-      // Add AOS attribute for animation (fade-up effect)
-      tr.setAttribute('data-aos', 'fade-up');
+    const possibleDecisions = ["Undecided","Followup","Finished","Ordered","Denied","Approved"];
 
-      // Order ID
-      const tdOrder = document.createElement('td');
-      tdOrder.textContent = order.orderId || '';
-      tr.appendChild(tdOrder);
-      // Date
-      const tdDate = document.createElement('td');
-      tdDate.textContent = order.date || '';
-      tr.appendChild(tdDate);
-      // Customer
-      const tdCustomer = document.createElement('td');
-      tdCustomer.textContent = order.customer || '';
-      tr.appendChild(tdCustomer);
-      // Tracking URL (editable input)
-      const tdTrack = document.createElement('td');
-      const trackInput = document.createElement('input');
-      trackInput.type = 'url';
-      trackInput.value = order.trackingUrl || '';
-      trackInput.className = 'form-control form-control-sm';
-      trackInput.id = 'tracking-' + order.orderId;
-      tdTrack.appendChild(trackInput);
-      tr.appendChild(tdTrack);
-      // Decision (editable dropdown)
-      const tdDecision = document.createElement('td');
-      const decisionSelect = document.createElement('select');
-      decisionSelect.className = 'form-select form-select-sm';
-      decisionSelect.id = 'decision-' + order.orderId;
-      // Define decision options (update these as needed to match actual workflow)
-      const decisions = ["Pending", "Approved", "Rejected"];
-      decisions.forEach(dec => {
-        const opt = document.createElement('option');
-        opt.value = dec;
-        opt.textContent = dec;
-        decisionSelect.appendChild(opt);
-      });
-      // Set current decision value
-      if (order.decision) {
-        decisionSelect.value = order.decision;
+    // Utils
+    function createOption(value, selectedValue){
+      const opt=document.createElement('option');
+      opt.value=value; opt.textContent=value; if(value===selectedValue) opt.selected=true; return opt;
+    }
+    function formatDateTime(iso){
+      if(!iso) return "";
+      return new Date(iso).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+    }
+
+    function createRow(item, index){
+      const tr=document.createElement('tr');
+      tr.dataset.id=item.ID || "";
+      tr.setAttribute('data-aos','fade-up');
+      tr.setAttribute('data-aos-delay', index*75);
+
+      // Helper to add cell with text
+      function addCell(text, cls){ const td=document.createElement('td'); if(cls) td.className=cls; td.textContent=text||""; tr.appendChild(td);}  
+
+      addCell(item.ID);
+      addCell(item.RequesterName?.DisplayName);
+      addCell(item.Materials_or_Equipment_Name);
+      addCell(item.Quantity);
+      addCell(item.Unit);
+      addCell(item.Reason,'preserve-lines');
+
+      // Link cell
+      const tdLink=document.createElement('td');
+      if(item.Link_of_Materials_or_Equipment){
+        const a=document.createElement('a'); a.href=item.Link_of_Materials_or_Equipment; a.target='_blank'; a.textContent='View';
+        tdLink.appendChild(a);
       }
-      tdDecision.appendChild(decisionSelect);
-      tr.appendChild(tdDecision);
-      // Supervisor Comments (editable input)
-      const tdComments = document.createElement('td');
-      const commentInput = document.createElement('input');
-      commentInput.type = 'text';
-      commentInput.value = order.comments || '';
-      commentInput.className = 'form-control form-control-sm';
-      commentInput.id = 'comments-' + order.orderId;
-      tdComments.appendChild(commentInput);
-      tr.appendChild(tdComments);
-      // Action (Submit button)
-      const tdAction = document.createElement('td');
-      const updateBtn = document.createElement('button');
-      updateBtn.className = 'btn btn-primary btn-sm btn-submit';
-      updateBtn.innerHTML = '<i class="bi bi-send"></i> Submit';
-      // On button click, call submitUpdate for this order
-      updateBtn.onclick = function() {
-        submitUpdate(order.orderId);
-      };
-      tdAction.appendChild(updateBtn);
-      tr.appendChild(tdAction);
+      tr.appendChild(tdLink);
+
+      // Tracking URL editable
+      const tdTrack=document.createElement('td');
+      const trackInput=document.createElement('input'); trackInput.type='url'; trackInput.className='form-control form-control-sm'; trackInput.value=item.The_Order_Tracking_URL||''; trackInput.id=`track-${item.ID}`;
+      tdTrack.appendChild(trackInput); tr.appendChild(tdTrack);
+
+      addCell(formatDateTime(item.Order_Submitted_Time));
+
+      // Decision select
+      const tdDecision=document.createElement('td');
+      const sel=document.createElement('select'); sel.className='form-select form-select-sm'; sel.id=`decision-${item.ID}`;
+      possibleDecisions.forEach(d=>sel.appendChild(createOption(d,item.Decision?.Value||"Undecided")));
+      tdDecision.appendChild(sel); tr.appendChild(tdDecision);
+
+      addCell(item.Cost);
+      addCell(item.Currency);
+      addCell(item.Supply_Code);
+
+      // Comments editable
+      const tdCom=document.createElement('td');
+      const area=document.createElement('textarea'); area.rows=2; area.className='form-control form-control-sm'; area.value=item.Comments_by_Supervisor||''; area.id=`comments-${item.ID}`;
+      tdCom.appendChild(area); tr.appendChild(tdCom);
+
+      // Action button
+      const tdAct=document.createElement('td');
+      const btn=document.createElement('button'); btn.className='btn btn-primary btn-sm btn-submit'; btn.innerHTML='<i class="bi bi-send"></i>';
+      btn.onclick=()=>submitUpdate(item.ID);
+      tdAct.appendChild(btn); tr.appendChild(tdAct);
 
       return tr;
     }
 
-    // Load orders from the LIST_FETCH_URL and populate the table
-    async function loadOrders() {
-      try {
-        const response = await fetch(LIST_FETCH_URL);
-        if (!response.ok) throw new Error('Failed to fetch order list');
-        const ordersData = await response.json();
-        const tbody = document.getElementById('orders-table-body');
-        // Remove the loading indicator row
-        const loadingRow = document.getElementById('loading-row');
-        if (loadingRow) {
-          loadingRow.remove();
-        }
-        // If no orders returned, show a 'no data' message
-        if (!ordersData || ordersData.length === 0) {
-          const noDataRow = document.createElement('tr');
-          const td = document.createElement('td');
-          td.colSpan = 7;
-          td.className = 'text-center';
-          td.textContent = 'No orders to review.';
-          noDataRow.appendChild(td);
-          tbody.appendChild(noDataRow);
-          return;
-        }
-        // Create a row for each order and append to the table body
-        ordersData.forEach((order, index) => {
-          const row = createOrderRow(order);
-          // Stagger animation delay for a nicer entrance effect
-          row.setAttribute('data-aos-delay', index * 100);
-          tbody.appendChild(row);
+    async function loadData(){
+      const tbody=document.getElementById('requestsBody');
+      try{
+        const res=await fetch(LIST_FETCH_URL);
+        if(!res.ok) throw new Error('Fetch error');
+        let data=await res.json();
+
+        // Sort by Decision order
+        data.sort((a,b)=>{
+          const aIdx=possibleDecisions.indexOf(a.Decision?.Value||"Undecided");
+          const bIdx=possibleDecisions.indexOf(b.Decision?.Value||"Undecided");
+          return (aIdx<0?99:aIdx)-(bIdx<0?99:bIdx);
         });
-        // Initialize AOS animations (with once option so they animate only on first appearance)
-        AOS.init({ duration: 800, once: true });
-      } catch (error) {
-        console.error('Error loading orders:', error);
-        // Show an error message in the loading row if data fetch fails
-        const loadingRow = document.getElementById('loading-row');
-        if (loadingRow) {
-          loadingRow.querySelector('span').textContent = 'Failed to load orders.';
-          const spinner = loadingRow.querySelector('.spinner-border');
-          if (spinner) spinner.remove();
-        }
+
+        document.getElementById('loadingRow')?.remove();
+        data.forEach((item,i)=>tbody.appendChild(createRow(item,i)));
+        AOS.init({duration:700,once:true});
+      }catch(e){
+        console.error(e);
+        const row=document.getElementById('loadingRow'); if(row){row.querySelector('span').textContent='Error loading data'; row.querySelector('.spinner-border').remove();}
       }
     }
 
-    // Submit updated data for a specific order via the UPDATE_FLOW_URL
-    function submitUpdate(orderId) {
-      // Gather the current values from the inputs/select
-      const trackingValue = document.getElementById('tracking-' + orderId).value;
-      const decisionValue = document.getElementById('decision-' + orderId).value;
-      const commentsValue = document.getElementById('comments-' + orderId).value;
-      // Construct payload (adjust keys to match API requirements if different)
-      const payload = {
-        orderId: orderId,
-        trackingUrl: trackingValue,
-        decision: decisionValue,
-        comments: commentsValue
+    function submitUpdate(id){
+      const row=document.querySelector(`tr[data-id="${id}"]`);
+      if(!row) return;
+      const btn=row.querySelector('button');
+      const payload={
+        ID:id,
+        The_Order_Tracking_URL:document.getElementById(`track-${id}`).value.trim(),
+        Decision:document.getElementById(`decision-${id}`).value.trim(),
+        Comments_by_Supervisor:document.getElementById(`comments-${id}`).value.trim()
       };
-      // Visual feedback: disable button and show spinner while submitting
-      const row = document.getElementById('decision-' + orderId).closest('tr');
-      const button = row.querySelector('button');
-      button.disabled = true;
-      button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting';
-      // Send the POST request
-      fetch(UPDATE_FLOW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(response => {
-        // Re-enable button and restore text
-        button.disabled = false;
-        button.innerHTML = '<i class="bi bi-send"></i> Submit';
-        if (response.ok) {
-          // Success feedback: highlight the row
-          row.classList.add('table-success');
-          console.log(`Order ${orderId} updated successfully.`);
-          // Optionally, remove or fade out the row after success (if the order should disappear on review):
-          // setTimeout(() => row.remove(), 1000);
-          // Remove the highlight after a short delay
-          setTimeout(() => { row.classList.remove('table-success'); }, 2000);
-        } else {
-          console.error(`Update failed for order ${orderId}.`);
-          // Error feedback: highlight the row in red temporarily
-          row.classList.add('table-danger');
-          setTimeout(() => { row.classList.remove('table-danger'); }, 2000);
-        }
-      })
-      .catch(err => {
-        console.error('Network error during update:', err);
-        // Restore button state
-        button.disabled = false;
-        button.innerHTML = '<i class="bi bi-send"></i> Submit';
-        // Highlight row in red on network error as well
-        row.classList.add('table-danger');
-        setTimeout(() => { row.classList.remove('table-danger'); }, 2000);
-      });
+      // visual feedback
+      btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+      fetch(UPDATE_FLOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+        .then(r=>{
+          btn.disabled=false; btn.innerHTML='<i class="bi bi-send"></i>';
+          if(r.ok){ row.classList.add('table-success'); setTimeout(()=>row.classList.remove('table-success'),2000); }
+          else { row.classList.add('table-danger'); setTimeout(()=>row.classList.remove('table-danger'),2000); console.error('Update failed'); }
+        })
+        .catch(err=>{btn.disabled=false; btn.innerHTML='<i class="bi bi-send"></i>'; row.classList.add('table-danger'); setTimeout(()=>row.classList.remove('table-danger'),2000); console.error(err);});
     }
 
-    // Initialize data loading when DOM is ready
-    document.addEventListener('DOMContentLoaded', loadOrders);
+    document.addEventListener('DOMContentLoaded',loadData);
   </script>
 </body>
 </html>
