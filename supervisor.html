@@ -1,206 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--  
-  Modernised Supervisor Dashboard (full‑field version)
-  ‑ All original columns preserved and functional.
-  ‑ Inline editing for Tracking URL, Decision, and Comments.
-  ‑ Uses Bootstrap 5, Bootstrap Icons, and AOS (Animate‑on‑Scroll) for VFX.
-  ‑ No build tools or frameworks required; plug‑and‑play HTML file.
+  Supervisor Dashboard with Three Sub‑pages (Pending │ Approved │ Archived)
+  ‑ Pending tab lists every request whose Decision ≠ "Approved" and ≠ "Archived".
+  ‑ Approved tab shows all "Approved" items and offers an additional **Archive** button.
+  ‑ Archived tab lists items marked "Archived" (via the Archive button or existing data).
+  ‑ All columns preserved; inline editing still available for Tracking URL, Decision, and Comments in Pending & Approved views.
+  ‑ Uses Bootstrap 5, Icons, and AOS. 100 % static – no build step required.
 -->
 <head>
   <meta charset="UTF-8" />
   <title>Supervisor Order Review Dashboard</title>
-  <!-- Bootstrap 5 CSS (CDN) -->
+  <!-- Bootstrap 5 CSS → -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
-  <!-- Bootstrap Icons -->
+  <!-- Bootstrap Icons → -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
-  <!-- AOS CSS (animations) -->
+  <!-- AOS (Animate‑on‑Scroll) CSS → -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
   <style>
-    body { background-color:#f6f8fa; }
-    .dashboard-container { padding:2rem; }
-
-    .card { border:none; border-radius:.7rem; box-shadow:0 3px 10px rgba(0,0,0,0.08); }
-
-    /* table tweaks */
-    table thead th { background:#e9ecef; border-bottom:2px solid #dee2e6; }
-    table tbody tr { transition:background .18s ease; }
-    table tbody tr:hover { background:#f1f5f9; }
-
-    /* preserve multiline text (Reason column) */
-    .preserve-lines { white-space:pre-wrap; word-wrap:break-word; }
-
-    /* animated action button */
-    .btn-submit { transition:transform .2s, box-shadow .2s; }
-    .btn-submit:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,.15); }
-    .btn-submit:active { transform:none; box-shadow:none; }
+    body{background:#f6f8fa;}
+    .dashboard-container{padding:2rem;}
+    .card{border:none;border-radius:.7rem;box-shadow:0 3px 10px rgba(0,0,0,.08);}  
+    table thead th{background:#e9ecef;border-bottom:2px solid #dee2e6;}
+    table tbody tr{transition:background .18s ease;}
+    table tbody tr:hover{background:#f1f5f9;}
+    .preserve-lines{white-space:pre-wrap;word-wrap:break-word;}
+    .btn-submit{transition:transform .2s,box-shadow .2s;}
+    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.15);} 
+    .btn-submit:active{transform:none;box-shadow:none;}
   </style>
 </head>
 <body>
-  <!-- Top navbar -->
+  <!-- Navbar → -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-    <div class="container-fluid">
-      <span class="navbar-brand">Supervisor Dashboard</span>
-    </div>
+    <div class="container-fluid"><span class="navbar-brand">Supervisor Dashboard</span></div>
   </nav>
 
   <div class="container-fluid dashboard-container">
-    <h2 class="mb-4">Order Requests</h2>
-    <div class="card">
-      <div class="card-body">
-        <div class="table-responsive" style="max-height:80vh;">
-          <table class="table table-striped table-hover align-middle" id="requestsTable">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Requester Name</th>
-                <th>Materials / Equipment Name</th>
-                <th>Quantity</th>
-                <th>Unit</th>
-                <th>Reason</th>
-                <th>Links</th>
-                <th>Tracking URL</th>
-                <th>Submitted Time</th>
-                <th>Decision</th>
-                <th>Cost</th>
-                <th>Currency</th>
-                <th>Supply Code</th>
-                <th>Comments</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="requestsBody">
-              <tr id="loadingRow">
-                <td colspan="15" class="text-center py-4">
-                  <div class="spinner-border text-secondary" role="status"></div>
-                  <span class="ms-2">Loading orders…</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <h2 class="mb-3">Order Requests</h2>
+
+    <!-- Tabs Navigation → -->
+    <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab" aria-controls="pending-pane" aria-selected="true">
+          Pending&nbsp;<span class="badge bg-secondary" id="badge-pending">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-pane" type="button" role="tab" aria-controls="approved-pane" aria-selected="false">
+          Approved&nbsp;<span class="badge bg-secondary" id="badge-approved">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-pane" type="button" role="tab" aria-controls="archived-pane" aria-selected="false">
+          Archived&nbsp;<span class="badge bg-secondary" id="badge-archived">0</span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3" id="dashboardTabsContent">
+      <!-- ⮧ Pending Tab → -->
+      <div class="tab-pane fade show active" id="pending-pane" role="tabpanel" aria-labelledby="pending-tab">
+        <div class="card"><div class="card-body p-0">
+          <div class="table-responsive" style="max-height:78vh;">
+            <table class="table table-striped table-hover align-middle" id="pendingTable">
+              <thead><!-- common header --></thead>
+              <tbody id="pendingBody"><tr><td colspan="15" class="text-center py-4">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ⮧ Approved Tab → -->
+      <div class="tab-pane fade" id="approved-pane" role="tabpanel" aria-labelledby="approved-tab">
+        <div class="card"><div class="card-body p-0">
+          <div class="table-responsive" style="max-height:78vh;">
+            <table class="table table-striped table-hover align-middle" id="approvedTable">
+              <thead></thead>
+              <tbody id="approvedBody"><tr><td colspan="15" class="text-center py-4">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ⮧ Archived Tab → -->
+      <div class="tab-pane fade" id="archived-pane" role="tabpanel" aria-labelledby="archived-tab">
+        <div class="card"><div class="card-body p-0">
+          <div class="table-responsive" style="max-height:78vh;">
+            <table class="table table-striped table-hover align-middle" id="archivedTable">
+              <thead></thead>
+              <tbody id="archivedBody"><tr><td colspan="15" class="text-center py-4">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div></div>
       </div>
     </div>
   </div>
 
-  <!-- AOS & Bootstrap JS -->
+  <!-- AOS & Bootstrap JS → -->
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // 1) Fetch URL (GET)
-    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
-    // 2) Update URL (POST)
-    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
+    // Endpoints
+    const LIST_FETCH_URL="https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    const UPDATE_FLOW_URL="https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
 
-    const possibleDecisions = ["Undecided","Followup","Finished","Ordered","Denied","Approved"];
+    // Decision list (Archived added)
+    const possibleDecisions=["Undecided","Followup","Finished","Ordered","Denied","Approved","Archived"];
 
-    // Utils
-    function createOption(value, selectedValue){
-      const opt=document.createElement('option');
-      opt.value=value; opt.textContent=value; if(value===selectedValue) opt.selected=true; return opt;
-    }
-    function formatDateTime(iso){
-      if(!iso) return "";
-      return new Date(iso).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
-    }
+    // Re‑usable table header HTML (to keep markup DRY)
+    const commonHeaderHTML=`<tr>
+      <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th><th>Quantity</th>
+      <th>Unit</th><th>Reason</th><th>Links</th><th>Tracking URL</th><th>Submitted Time</th>
+      <th>Decision</th><th>Cost</th><th>Currency</th><th>Supply Code</th><th>Comments</th><th>Action</th>
+    </tr>`;
+    document.querySelectorAll('table thead').forEach(th=>th.innerHTML=commonHeaderHTML);
 
-    function createRow(item, index){
-      const tr=document.createElement('tr');
-      tr.dataset.id=item.ID || "";
-      tr.setAttribute('data-aos','fade-up');
-      tr.setAttribute('data-aos-delay', index*75);
+    // Utilities
+    const formatDateTime=iso=>!iso?"":new Date(iso).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+    const createOption=(v,sel)=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===sel)o.selected=true;return o;};
 
-      // Helper to add cell with text
-      function addCell(text, cls){ const td=document.createElement('td'); if(cls) td.className=cls; td.textContent=text||""; tr.appendChild(td);}  
+    // Build one table row; mode ∈ {"pending","approved","archived"}
+    function buildRow(item,mode,index){
+      const tr=document.createElement('tr'); tr.dataset.id=item.ID||""; tr.setAttribute('data-aos','fade-up'); tr.setAttribute('data-aos-delay',index*60);
+      const addCell=(html,cls)=>{const td=document.createElement('td');if(cls)td.className=cls;if(html instanceof Node)td.appendChild(html);else td.innerHTML=html;tr.appendChild(td);}  
 
-      addCell(item.ID);
-      addCell(item.RequesterName?.DisplayName);
-      addCell(item.Materials_or_Equipment_Name);
-      addCell(item.Quantity);
-      addCell(item.Unit);
-      addCell(item.Reason,'preserve-lines');
+      addCell(item.ID||"");
+      addCell(item.RequesterName?.DisplayName||"");
+      addCell(item.Materials_or_Equipment_Name||"");
+      addCell(item.Quantity||"");
+      addCell(item.Unit||"");
+      addCell(item.Reason||"","preserve-lines");
 
-      // Link cell
-      const tdLink=document.createElement('td');
-      if(item.Link_of_Materials_or_Equipment){
-        const a=document.createElement('a'); a.href=item.Link_of_Materials_or_Equipment; a.target='_blank'; a.textContent='View';
-        tdLink.appendChild(a);
-      }
-      tr.appendChild(tdLink);
+      // link
+      const linkTd=document.createElement('a');
+      if(item.Link_of_Materials_or_Equipment){linkTd.href=item.Link_of_Materials_or_Equipment;linkTd.target="_blank";linkTd.textContent="View";} addCell(linkTd);
 
-      // Tracking URL editable
-      const tdTrack=document.createElement('td');
-      const trackInput=document.createElement('input'); trackInput.type='url'; trackInput.className='form-control form-control-sm'; trackInput.value=item.The_Order_Tracking_URL||''; trackInput.id=`track-${item.ID}`;
-      tdTrack.appendChild(trackInput); tr.appendChild(tdTrack);
+      // tracking input (editable for pending & approved)
+      if(mode!="archived"){
+        const inp=document.createElement('input');inp.type='url';inp.className='form-control form-control-sm';inp.value=item.The_Order_Tracking_URL||'';inp.id=`track-${item.ID}`; addCell(inp);
+      }else addCell(item.The_Order_Tracking_URL||"");
 
       addCell(formatDateTime(item.Order_Submitted_Time));
 
-      // Decision select
-      const tdDecision=document.createElement('td');
-      const sel=document.createElement('select'); sel.className='form-select form-select-sm'; sel.id=`decision-${item.ID}`;
-      possibleDecisions.forEach(d=>sel.appendChild(createOption(d,item.Decision?.Value||"Undecided")));
-      tdDecision.appendChild(sel); tr.appendChild(tdDecision);
+      // decision select (editable pending/approved)
+      if(mode!="archived"){
+        const sel=document.createElement('select');sel.className='form-select form-select-sm';sel.id=`decision-${item.ID}`;possibleDecisions.forEach(d=>sel.appendChild(createOption(d,item.Decision?.Value||"Undecided")));addCell(sel);
+      }else addCell(item.Decision?.Value||"");
 
-      addCell(item.Cost);
-      addCell(item.Currency);
-      addCell(item.Supply_Code);
+      addCell(item.Cost||"");
+      addCell(item.Currency||"");
+      addCell(item.Supply_Code||"");
 
-      // Comments editable
-      const tdCom=document.createElement('td');
-      const area=document.createElement('textarea'); area.rows=2; area.className='form-control form-control-sm'; area.value=item.Comments_by_Supervisor||''; area.id=`comments-${item.ID}`;
-      tdCom.appendChild(area); tr.appendChild(tdCom);
+      // comments textarea if editable
+      if(mode!="archived"){
+        const ta=document.createElement('textarea');ta.className='form-control form-control-sm';ta.rows=2;ta.id=`comments-${item.ID}`;ta.value=item.Comments_by_Supervisor||'';addCell(ta);
+      }else addCell(item.Comments_by_Supervisor||"");
 
-      // Action button
+      // action buttons
       const tdAct=document.createElement('td');
-      const btn=document.createElement('button'); btn.className='btn btn-primary btn-sm btn-submit'; btn.innerHTML='<i class="bi bi-send"></i>';
-      btn.onclick=()=>submitUpdate(item.ID);
-      tdAct.appendChild(btn); tr.appendChild(tdAct);
-
+      if(mode!="archived"){
+        // primary submit/update
+        const btnSubmit=document.createElement('button');btnSubmit.className='btn btn-primary btn-sm btn-submit me-1';btnSubmit.innerHTML='<i class="bi bi-send"></i>';
+        btnSubmit.onclick=()=>submitUpdate(item.ID);
+        tdAct.appendChild(btnSubmit);
+        // extra Archive button for approved
+        if(mode==="approved"){
+          const btnArch=document.createElement('button');btnArch.className='btn btn-outline-secondary btn-sm';btnArch.innerHTML='<i class="bi bi-archive"></i>';
+          btnArch.onclick=()=>archiveOrder(item.ID);
+          tdAct.appendChild(btnArch);
+        }
+      }
+      tr.appendChild(tdAct);
       return tr;
     }
 
+    // Load & populate data
     async function loadData(){
-      const tbody=document.getElementById('requestsBody');
+      const [pendBody,apprBody,archBody]=['pendingBody','approvedBody','archivedBody'].map(id=>document.getElementById(id));
+      [pendBody,apprBody,archBody].forEach(b=>b.innerHTML='');
       try{
-        const res=await fetch(LIST_FETCH_URL);
-        if(!res.ok) throw new Error('Fetch error');
-        let data=await res.json();
-
-        // Sort by Decision order
-        data.sort((a,b)=>{
-          const aIdx=possibleDecisions.indexOf(a.Decision?.Value||"Undecided");
-          const bIdx=possibleDecisions.indexOf(b.Decision?.Value||"Undecided");
-          return (aIdx<0?99:aIdx)-(bIdx<0?99:bIdx);
-        });
-
-        document.getElementById('loadingRow')?.remove();
-        data.forEach((item,i)=>tbody.appendChild(createRow(item,i)));
-        AOS.init({duration:700,once:true});
-      }catch(e){
-        console.error(e);
-        const row=document.getElementById('loadingRow'); if(row){row.querySelector('span').textContent='Error loading data'; row.querySelector('.spinner-border').remove();}
-      }
+        const res=await fetch(LIST_FETCH_URL); if(!res.ok) throw new Error('Fetch error'); const data=await res.json();
+        // filter
+        const pending=data.filter(i=>!["Approved","Archived"].includes(i.Decision?.Value));
+        const approved=data.filter(i=>i.Decision?.Value==="Approved");
+        const archived=data.filter(i=>i.Decision?.Value==="Archived");
+        // counts
+        document.getElementById('badge-pending').textContent=pending.length;
+        document.getElementById('badge-approved').textContent=approved.length;
+        document.getElementById('badge-archived').textContent=archived.length;
+        // render
+        pending.forEach((it,idx)=>pendBody.appendChild(buildRow(it,'pending',idx)));
+        approved.forEach((it,idx)=>apprBody.appendChild(buildRow(it,'approved',idx)));
+        archived.forEach((it,idx)=>archBody.appendChild(buildRow(it,'archived',idx)));
+        if(pending.length+approved.length+archived.length===0){pendBody.innerHTML='<tr><td colspan="15" class="text-center py-4">No orders found</td></tr>'};
+        AOS.init({duration:650,once:true});
+      }catch(err){console.error(err); pendBody.innerHTML='<tr><td colspan="15" class="text-center py-4 text-danger">Error loading data</td></tr>';}
     }
 
+    // Update (submit) handler
     function submitUpdate(id){
       const row=document.querySelector(`tr[data-id="${id}"]`);
-      if(!row) return;
-      const btn=row.querySelector('button');
-      const payload={
-        ID:id,
-        The_Order_Tracking_URL:document.getElementById(`track-${id}`).value.trim(),
-        Decision:document.getElementById(`decision-${id}`).value.trim(),
-        Comments_by_Supervisor:document.getElementById(`comments-${id}`).value.trim()
-      };
-      // visual feedback
+      if(!row)return; const btn=row.querySelector('button.btn-submit');
+      const payload={ID:id,The_Order_Tracking_URL:document.getElementById(`track-${id}`)?.value?.trim(),Decision:document.getElementById(`decision-${id}`)?.value.trim(),Comments_by_Supervisor:document.getElementById(`comments-${id}`)?.value.trim()};
       btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
       fetch(UPDATE_FLOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-        .then(r=>{
-          btn.disabled=false; btn.innerHTML='<i class="bi bi-send"></i>';
-          if(r.ok){ row.classList.add('table-success'); setTimeout(()=>row.classList.remove('table-success'),2000); }
-          else { row.classList.add('table-danger'); setTimeout(()=>row.classList.remove('table-danger'),2000); console.error('Update failed'); }
-        })
-        .catch(err=>{btn.disabled=false; btn.innerHTML='<i class="bi bi-send"></i>'; row.classList.add('table-danger'); setTimeout(()=>row.classList.remove('table-danger'),2000); console.error(err);});
+        .then(r=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-send"></i>';row.classList.add(r.ok?'table-success':'table-danger');setTimeout(()=>row.classList.remove('table-success','table-danger'),2000);})
+        .catch(e=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-send"></i>';row.classList.add('table-danger');setTimeout(()=>row.classList.remove('table-danger'),2000);console.error(e)});
+    }
+
+    // Archive handler – marks Decision="Archived" then refreshes lists
+    function archiveOrder(id){
+      const row=document.querySelector(`tr[data-id="${id}"]`); if(!row)return; const btn=row.querySelector('button.btn-outline-secondary');
+      const payload={ID:id,Decision:'Archived'};
+      btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+      fetch(UPDATE_FLOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+        .then(r=>{btn.disabled=false; btn.innerHTML='<i class="bi bi-archive"></i>'; if(r.ok){loadData();} else {row.classList.add('table-danger');setTimeout(()=>row.classList.remove('table-danger'),2000);}})
+        .catch(e=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-archive"></i>';row.classList.add('table-danger');setTimeout(()=>row.classList.remove('table-danger'),2000);console.error(e)});
     }
 
     document.addEventListener('DOMContentLoaded',loadData);
