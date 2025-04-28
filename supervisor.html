@@ -306,9 +306,13 @@
           row.classList.add('table-danger');
           setTimeout(() => row.classList.remove('table-danger'), 3000);
         } else {
+      // 1) Notify the user...
           showInfo(`ID ${id} updated successfully.`);
+          // 2) Optionally flash the row green for feedback...
           row.classList.add('table-success');
-          setTimeout(() => row.classList.remove('table-success'), 3000);
+          setTimeout(() => row.classList.remove('table-success'), 1000);
+          // 3) Re-load all data from the server to reflect any changes
+          await loadData();
         }
       } catch (err) {
         btn.disabled = false;
