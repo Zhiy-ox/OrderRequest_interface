@@ -6,26 +6,17 @@
   - "Archived" removed from decision options.
   - No manual archive button.
   - Enhanced showError to display HTTP status and response body.
-  - Added Attachments column with view & copy-URL buttons.
+  - Added Attachments column.
 -->
 <head>
   <meta charset="UTF-8" />
   <title>Supervisor Order Review Dashboard</title>
   <!-- Bootstrap CSS -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
   <!-- Bootstrap Icons -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
   <!-- AOS CSS -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
   <style>
     body { background: #f6f8fa; }
     .dashboard-container { padding: 2rem; }
@@ -52,9 +43,21 @@
 
     <!-- Tabs -->
     <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
-      <li class="nav-item"><button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane">Pending <span class="badge bg-secondary" id="badge-pending">0</span></button></li>
-      <li class="nav-item"><button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-pane">Approved <span class="badge bg-secondary" id="badge-approved">0</span></button></li>
-      <li class="nav-item"><button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-pane">Archived <span class="badge bg-secondary" id="badge-archived">0</span></button></li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button">
+          Pending <span class="badge bg-secondary" id="badge-pending">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-pane" type="button">
+          Approved <span class="badge bg-secondary" id="badge-approved">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-pane" type="button">
+          Archived <span class="badge bg-secondary" id="badge-archived">0</span>
+        </button>
+      </li>
     </ul>
 
     <div class="tab-content pt-3">
@@ -101,11 +104,10 @@
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const LIST_FETCH_URL  = "https://prod-108.westeurope.logic.azure.com/…YOUR_LIST_FETCH_SIG…";
-    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com/…YOUR_UPDATE_SIG…";
+    const LIST_FETCH_URL  = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
     const possibleDecisions = ["Undecided","Followup","Ordered","Denied","Approved","Finished"];
 
-    // ——— Alert helpers ———
     function showError(msg) {
       const area = document.getElementById('alertArea');
       area.innerHTML = `
@@ -124,17 +126,6 @@
         </div>`;
       area.scrollIntoView({ behavior: 'smooth' });
     }
-
-    // ——— Attachment URL utilities ———
-    function openInNewTab(url) {
-      window.open(url, '_blank', 'noopener');
-    }
-    function copyUrlToClipboard(url) {
-      navigator.clipboard.writeText(url)
-        .then(() => showInfo('Attachment URL copied to clipboard.'))
-        .catch(err => showError('Failed to copy URL: ' + err));
-    }
-
     const fmt = iso => !iso ? "" : new Date(iso).toLocaleString("en-GB", {
       year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'
     });
@@ -150,48 +141,80 @@
       tr.dataset.id = item.ID;
       tr.setAttribute('data-aos','fade-up');
       tr.setAttribute('data-aos-delay',idx*60);
-      const addCell = (c, cls) => {
+      const addCell = (content, cls) => {
         const td = document.createElement('td');
         if (cls) td.className = cls;
-        if (c instanceof Node) td.appendChild(c);
-        else td.innerHTML = c;
+        if (content instanceof Node) td.appendChild(content);
+        else td.innerHTML = content;
         tr.appendChild(td);
       };
 
-      // … existing cells for ID, request fields, …  
+      // existing cells…
+      addCell(item.ID||"");
+      addCell(item.RequesterName?.DisplayName||"");
+      addCell(item.Materials_or_Equipment_Name||"");
+      addCell(item.Quantity||"");
+      addCell(item.Unit||"");
+      addCell(item.Reason||"",'preserve-lines');
 
-      // Comments
-      if (mode !== 'archived') {
-        const ta = Object.assign(document.createElement('textarea'), {
-          className: 'form-control form-control-sm',
-          rows: 2,
-          id: `comments-${item.ID}`
+      // link cell
+      const linkEl = item.Link_of_Materials_or_Equipment
+        ? Object.assign(document.createElement('a'),{
+            href:item.Link_of_Materials_or_Equipment,
+            target:'_blank',
+            textContent:'View'
+          })
+        : '';
+      addCell(linkEl);
+
+      // tracking URL
+      if(mode!=='archived'){
+        const inp = Object.assign(document.createElement('input'),{
+          type:'url',
+          className:'form-control form-control-sm',
+          value:item.The_Order_Tracking_URL||'',
+          id:`track-${item.ID}`
         });
-        ta.value = item.Comments_by_Supervisor || '';
-        addCell(ta);
-      } else {
-        addCell(item.Comments_by_Supervisor || '');
-      }
+        addCell(inp);
+      } else addCell(item.The_Order_Tracking_URL||'');
 
-      // Attachments
-      if (Array.isArray(item.Attachments) && item.Attachments.length) {
+      addCell(fmt(item.Order_Submitted_Time));
+
+      // decision
+      if(mode!=='archived'){
+        const sel = Object.assign(document.createElement('select'),{
+          className:'form-select form-select-sm',
+          id:`decision-${item.ID}`
+        });
+        possibleDecisions.forEach(d=>sel.appendChild(makeOption(d,item.Decision?.Value||'Undecided')));
+        addCell(sel);
+      } else addCell(item.Decision?.Value||'');
+
+      addCell(item.Cost||"");
+      addCell(item.Currency||"");
+      addCell(item.Supply_Code||"");
+
+      // comments
+      if(mode!=='archived'){
+        const ta = Object.assign(document.createElement('textarea'),{
+          className:'form-control form-control-sm',
+          rows:2,
+          id:`comments-${item.ID}`
+        });
+        ta.value = item.Comments_by_Supervisor||'';
+        addCell(ta);
+      } else addCell(item.Comments_by_Supervisor||'');
+
+      // **Attachments**  
+      if(Array.isArray(item.Attachments) && item.Attachments.length){
         const div = document.createElement('div');
         div.className='preserve-lines';
-        item.Attachments.forEach(att => {
+        item.Attachments.forEach(att=>{
           const a = document.createElement('a');
-          a.href='#';
+          a.href = att.Url;
+          a.target = '_blank';
           a.textContent = att.FileName;
-          a.onclick = e => { e.preventDefault(); openInNewTab(att.Url); };
-
-          const copyBtn = document.createElement('button');
-          copyBtn.type = 'button';
-          copyBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-          copyBtn.title = 'Copy URL';
-          copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
-          copyBtn.onclick = () => copyUrlToClipboard(att.Url);
-
           div.appendChild(a);
-          div.appendChild(copyBtn);
           div.appendChild(document.createElement('br'));
         });
         addCell(div);
@@ -199,66 +222,101 @@
         addCell('—');
       }
 
-      // Action button
+      // action button
       const tdAct = document.createElement('td');
-      if (mode !== 'archived') {
-        const btn = Object.assign(document.createElement('button'), {
-          className: 'btn btn-primary btn-sm btn-submit',
-          innerHTML: '<i class="bi bi-send"></i>'
+      if(mode!=='archived'){
+        const btn = Object.assign(document.createElement('button'),{
+          className:'btn btn-primary btn-sm btn-submit',
+          innerHTML:'<i class="bi bi-send"></i>'
         });
-        btn.onclick = () => submitUpdate(item.ID);
+        btn.onclick = ()=> submitUpdate(item.ID);
         tdAct.appendChild(btn);
       }
       tr.appendChild(tdAct);
-
       return tr;
     }
 
-    // ——— loadData now uses GET, no body ———
     async function loadData() {
       const bodies = [
         document.getElementById('pendingBody'),
         document.getElementById('approvedBody'),
         document.getElementById('archivedBody')
       ];
-      bodies.forEach(b => b.innerHTML = '');
-
+      bodies.forEach(b=>b.innerHTML='');
       try {
-        // ← No POST, just GET:
         const res = await fetch(LIST_FETCH_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
-        const pending  = data.filter(i => !['Approved','Finished'].includes(i.Decision?.Value));
-        const approved = data.filter(i => i.Decision?.Value === 'Approved');
-        const archived = data.filter(i => i.Decision?.Value === 'Finished');
-
+        const pending  = data.filter(i=>!['Approved','Finished'].includes(i.Decision?.Value));
+        const approved = data.filter(i=>i.Decision?.Value==='Approved');
+        const archived = data.filter(i=>i.Decision?.Value==='Finished');
         document.getElementById('badge-pending').textContent  = pending.length;
         document.getElementById('badge-approved').textContent = approved.length;
         document.getElementById('badge-archived').textContent = archived.length;
-
-        pending.forEach((it, idx)   => bodies[0].appendChild(buildRow(it,'pending',   idx)));
-        approved.forEach((it, idx)  => bodies[1].appendChild(buildRow(it,'approved',  idx)));
-        archived.forEach((it, idx)  => bodies[2].appendChild(buildRow(it,'archived',  idx)));
-
-        if (pending.length + approved.length + archived.length === 0) {
+        pending.forEach((it,idx)=> bodies[0].appendChild(buildRow(it,'pending',idx)));
+        approved.forEach((it,idx)=> bodies[1].appendChild(buildRow(it,'approved',idx)));
+        archived.forEach((it,idx)=> bodies[2].appendChild(buildRow(it,'archived',idx)));
+        if(pending.length+approved.length+archived.length===0){
           bodies[0].innerHTML = '<tr><td colspan="16" class="text-center py-4">No orders found</td></tr>';
         }
-
-        AOS.init({ duration: 650, once: true });
-      } catch (e) {
+        AOS.init({ duration:650, once:true });
+      } catch(e){
         showError(`Failed to load orders: ${e.message}`);
         document.getElementById('pendingBody').innerHTML =
           '<tr><td colspan="16" class="text-center py-4 text-danger">Error loading data</td></tr>';
       }
     }
 
-    async function submitUpdate(id) {
-      // … unchanged …
+    async function submitUpdate(id){
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if(!row) return;
+      const btn = row.querySelector('button.btn-submit');
+      const payload = {
+        ID: id,
+        The_Order_Tracking_URL: document.getElementById(`track-${id}`).value.trim(),
+        Decision: document.getElementById(`decision-${id}`).value.trim(),
+        Comments_by_Supervisor: document.getElementById(`comments-${id}`).value.trim()
+      };
+      btn.disabled=true;
+      btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+      try {
+        const response = await fetch(UPDATE_FLOW_URL,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        btn.disabled=false;
+        btn.innerHTML='<i class="bi bi-send"></i>';
+        if(!response.ok){
+          const errorText = await response.text();
+          showError(`ID ${id} — HTTP ${response.status} ${response.statusText}: ${errorText}`);
+          row.classList.add('table-danger');
+          setTimeout(()=>row.classList.remove('table-danger'),3000);
+        } else {
+          showInfo(`ID ${id} updated successfully.`);
+          row.classList.add('table-success');
+          setTimeout(()=>row.classList.remove('table-success'),1000);
+          await loadData();
+        }
+      } catch(err){
+        btn.disabled=false;
+        btn.innerHTML='<i class="bi bi-send"></i>';
+        showError(`Network error for ID ${id}: ${err.message}`);
+        row.classList.add('table-danger');
+        setTimeout(()=>row.classList.remove('table-danger'),3000);
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      // insert headers, then…
+    document.addEventListener('DOMContentLoaded',()=>{
+      const headerHTML = `
+        <tr>
+          <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th>
+          <th>Quantity</th><th>Unit</th><th>Reason</th><th>Links</th>
+          <th>Tracking URL</th><th>Submitted Time</th><th>Decision</th>
+          <th>Cost</th><th>Currency</th><th>Supply Code</th>
+          <th>Comments</th><th>Attachments</th><th>Action</th>
+        </tr>`;
+      document.querySelectorAll('table thead').forEach(el=>el.innerHTML=headerHTML);
       loadData();
     });
   </script>
