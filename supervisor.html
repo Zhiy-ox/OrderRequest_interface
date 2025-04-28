@@ -245,6 +245,10 @@
       bodies.forEach(b=>b.innerHTML='');
       try {
         const res = await fetch(LIST_FETCH_URL);
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})    // send an empty JSON body
+        });
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const pending  = data.filter(i=>!['Approved','Finished'].includes(i.Decision?.Value));
