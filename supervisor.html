@@ -220,30 +220,21 @@
 
      // Attachments_URL (as anchor links)
       if (Array.isArray(item.Attachments_URL) && item.Attachments_URL.length) {
-        // Create a container (could be a div or a DocumentFragment)
-        const container = document.createElement('div');
-        container.className = 'd-flex flex-wrap gap-2';
-      
+        const div = document.createElement('div');
+        div.className = 'd-flex flex-wrap gap-2';
         item.Attachments_URL.forEach(url => {
-          // Extract the file name for the link text
-          const fileName = url.split('/').pop() || 'View';
-      
-          // Build an <a> just like Link-of-materials
-          const a = Object.assign(document.createElement('a'), {
-            href: url,
-            target: '_blank',
-            textContent: fileName  // or simply 'View' if you prefer
+          const btn = Object.assign(document.createElement('button'), {
+            type: 'button',
+            className: 'btn btn-sm btn-outline-primary',
+            textContent: 'View'
           });
-          a.className = 'me-2';   // small margin between links
-      
-          container.appendChild(a);
+          btn.onclick = () => window.open(url, '_blank', 'noopener');
+          div.appendChild(btn);
         });
-      
-        addCell(container);
+        addCell(div);
       } else {
         addCell('—');
       }
-
       // Action button
       const tdAct = document.createElement('td');
       if (mode !== 'archived') {
