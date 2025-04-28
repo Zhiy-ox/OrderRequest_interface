@@ -205,18 +205,20 @@
         addCell(ta);
       } else addCell(item.Comments_by_Supervisor||'');
 
-      // **Attachments**  
-      if (Array.isArray(item.Attachments) && item.Attachments.length) {
+     // **Attachments_URL**  
+      if (Array.isArray(item.Attachments_URL) && item.Attachments_URL.length) {
         const div = document.createElement('div');
         div.className = 'd-flex flex-wrap gap-2';
       
-        item.Attachments.forEach(att => {
-          // Create a “View” button
+        item.Attachments_URL.forEach(url => {
+          // extract the file name from the URL for the button label
+          const fileName = url.split('/').pop();
+      
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'btn btn-sm btn-outline-primary';
-          btn.textContent = att.DisplayName;
-          btn.onclick = () => window.open(att.AbsoluteUri, '_blank', 'noopener');
+          btn.textContent = fileName;
+          btn.onclick = () => window.open(url, '_blank', 'noopener');
       
           div.appendChild(btn);
         });
