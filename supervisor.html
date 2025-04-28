@@ -5,6 +5,7 @@
   - Archived tab now shows all "Finished" items automatically.
   - "Archived" removed from decision options.
   - No manual archive button.
+  - Enhanced showError to display HTTP status and response body.
 -->
 <head>
   <meta charset="UTF-8" />
@@ -102,30 +103,23 @@
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const LIST_FETCH_URL = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
+    const LIST_FETCH_URL  = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
     const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
 
-    // No "Archived" in choices
-    const possibleDecisions = ["Undecided","Followup","Finished","Ordered","Denied","Approved"];
+    const possibleDecisions = ["Undecided","Followup","Ordered","Denied","Approved","Finished"];
 
-    const headerHTML = `
-      <tr>
-        <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th>
-        <th>Quantity</th><th>Unit</th><th>Reason</th><th>Links</th>
-        <th>Tracking URL</th><th>Submitted Time</th><th>Decision</th>
-        <th>Cost</th><th>Currency</th><th>Supply Code</th><th>Comments</th><th>Action</th>
-      </tr>`;
-    document.querySelectorAll('table thead').forEach(el => el.innerHTML = headerHTML);
-
+    // Renders an error alert with HTTP status + body
     function showError(msg) {
       const area = document.getElementById('alertArea');
       area.innerHTML = `
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          ${msg}
+          <strong>Error:</strong> ${msg}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
       area.scrollIntoView({ behavior: 'smooth' });
     }
+
+    // Renders a success alert
     function showInfo(msg) {
       const area = document.getElementById('alertArea');
       area.innerHTML = `
@@ -136,27 +130,32 @@
       area.scrollIntoView({ behavior: 'smooth' });
     }
 
+    // Format ISO date to British locale
     const fmt = iso => !iso ? "" : new Date(iso).toLocaleString("en-GB", {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     });
-    const makeOption = (v, sel) => {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = v;
-      if (v === sel) o.selected = true;
-      return o;
-    };
 
+    function makeOption(value, selected) {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = value;
+      if (value === selected) o.selected = true;
+      return o;
+    }
+
+    // Build a table row for each item
     function buildRow(item, mode, idx) {
       const tr = document.createElement('tr');
       tr.dataset.id = item.ID;
       tr.setAttribute('data-aos', 'fade-up');
       tr.setAttribute('data-aos-delay', idx * 60);
-      const addCell = (c, cls) => {
+
+      const addCell = (content, cls) => {
         const td = document.createElement('td');
         if (cls) td.className = cls;
-        if (c instanceof Node) td.appendChild(c);
-        else td.innerHTML = c;
+        if (content instanceof Node) td.appendChild(content);
+        else td.innerHTML = content;
         tr.appendChild(td);
       };
 
@@ -167,7 +166,7 @@
       addCell(item.Unit || "");
       addCell(item.Reason || "", 'preserve-lines');
 
-      // Links
+      // Link cell
       const linkEl = item.Link_of_Materials_or_Equipment
         ? Object.assign(document.createElement('a'), {
             href: item.Link_of_Materials_or_Equipment,
@@ -177,7 +176,7 @@
         : '';
       addCell(linkEl);
 
-      // Tracking URL
+      // Tracking URL input or text
       if (mode !== 'archived') {
         const inp = Object.assign(document.createElement('input'), {
           type: 'url',
@@ -186,11 +185,13 @@
           id: `track-${item.ID}`
         });
         addCell(inp);
-      } else addCell(item.The_Order_Tracking_URL || "");
+      } else {
+        addCell(item.The_Order_Tracking_URL || "");
+      }
 
       addCell(fmt(item.Order_Submitted_Time));
 
-      // Decision
+      // Decision dropdown or text
       if (mode !== 'archived') {
         const sel = Object.assign(document.createElement('select'), {
           className: 'form-select form-select-sm',
@@ -198,13 +199,15 @@
         });
         possibleDecisions.forEach(d => sel.appendChild(makeOption(d, item.Decision?.Value || 'Undecided')));
         addCell(sel);
-      } else addCell(item.Decision?.Value || "");
+      } else {
+        addCell(item.Decision?.Value || "");
+      }
 
       addCell(item.Cost || "");
       addCell(item.Currency || "");
       addCell(item.Supply_Code || "");
 
-      // Comments
+      // Comments textarea or text
       if (mode !== 'archived') {
         const ta = Object.assign(document.createElement('textarea'), {
           className: 'form-control form-control-sm',
@@ -213,9 +216,11 @@
         });
         ta.value = item.Comments_by_Supervisor || '';
         addCell(ta);
-      } else addCell(item.Comments_by_Supervisor || "");
+      } else {
+        addCell(item.Comments_by_Supervisor || "");
+      }
 
-      // Action
+      // Action button
       const tdAct = document.createElement('td');
       if (mode !== 'archived') {
         const btn = Object.assign(document.createElement('button'), {
@@ -226,9 +231,11 @@
         tdAct.appendChild(btn);
       }
       tr.appendChild(tdAct);
+
       return tr;
     }
 
+    // Load and partition data into tabs
     async function loadData() {
       const bodies = [
         document.getElementById('pendingBody'),
@@ -236,12 +243,13 @@
         document.getElementById('archivedBody')
       ];
       bodies.forEach(b => b.innerHTML = '');
+
       try {
         const res = await fetch(LIST_FETCH_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        const pending = data.filter(i => !["Approved", "Finished"].includes(i.Decision?.Value));
+        const pending = data.filter(i => !["Approved","Finished"].includes(i.Decision?.Value));
         const approved = data.filter(i => i.Decision?.Value === "Approved");
         const archived = data.filter(i => i.Decision?.Value === "Finished");
 
@@ -249,9 +257,9 @@
         document.getElementById('badge-approved').textContent = approved.length;
         document.getElementById('badge-archived').textContent = archived.length;
 
-        pending.forEach((it, idx) => bodies[0].appendChild(buildRow(it, 'pending', idx)));
-        approved.forEach((it, idx) => bodies[1].appendChild(buildRow(it, 'approved', idx)));
-        archived.forEach((it, idx) => bodies[2].appendChild(buildRow(it, 'archived', idx)));
+        pending.forEach((it, idx)   => bodies[0].appendChild(buildRow(it, 'pending',   idx)));
+        approved.forEach((it, idx)  => bodies[1].appendChild(buildRow(it, 'approved',  idx)));
+        archived.forEach((it, idx)  => bodies[2].appendChild(buildRow(it, 'archived',  idx)));
 
         if (pending.length + approved.length + archived.length === 0) {
           bodies[0].innerHTML = '<tr><td colspan="15" class="text-center py-4">No orders found</td></tr>';
@@ -259,13 +267,14 @@
 
         AOS.init({ duration: 650, once: true });
       } catch (e) {
-        showError('Failed to load orders: ' + e.message);
+        showError(`Failed to load orders: ${e.message}`);
         document.getElementById('pendingBody').innerHTML =
           '<tr><td colspan="15" class="text-center py-4 text-danger">Error loading data</td></tr>';
       }
     }
 
-    function submitUpdate(id) {
+    // Submit an update, showing detailed errors if it fails
+    async function submitUpdate(id) {
       const row = document.querySelector(`tr[data-id="${id}"]`);
       if (!row) return;
       const btn = row.querySelector('button.btn-submit');
@@ -280,33 +289,49 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
-      fetch(UPDATE_FLOW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(r => {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-send"></i>';
-          if (!r.ok) {
-            showError('Update failed for ID ' + id);
-            row.classList.add('table-danger');
-            setTimeout(() => row.classList.remove('table-danger'), 2000);
-          } else {
-            row.classList.add('table-success');
-            setTimeout(() => row.classList.remove('table-success'), 2000);
-          }
-        })
-        .catch(err => {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-send"></i>';
-          showError('Network error while updating ID ' + id + ': ' + err.message);
-          row.classList.add('table-danger');
-          setTimeout(() => row.classList.remove('table-danger'), 2000);
+      try {
+        const response = await fetch(UPDATE_FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i>';
+
+        if (!response.ok) {
+          // read response body for details
+          const errorText = await response.text();
+          showError(`ID ${id} — HTTP ${response.status} ${response.statusText}: ${errorText}`);
+          row.classList.add('table-danger');
+          setTimeout(() => row.classList.remove('table-danger'), 3000);
+        } else {
+          showInfo(`ID ${id} updated successfully.`);
+          row.classList.add('table-success');
+          setTimeout(() => row.classList.remove('table-success'), 3000);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i>';
+        showError(`Network error for ID ${id}: ${err.message}`);
+        row.classList.add('table-danger');
+        setTimeout(() => row.classList.remove('table-danger'), 3000);
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', loadData);
+    document.addEventListener('DOMContentLoaded', () => {
+      // Insert table headers
+      const headerHTML = `
+        <tr>
+          <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th>
+          <th>Quantity</th><th>Unit</th><th>Reason</th><th>Links</th>
+          <th>Tracking URL</th><th>Submitted Time</th><th>Decision</th>
+          <th>Cost</th><th>Currency</th><th>Supply Code</th><th>Comments</th><th>Action</th>
+        </tr>`;
+      document.querySelectorAll('table thead').forEach(el => el.innerHTML = headerHTML);
+
+      loadData();
+    });
   </script>
 </body>
 </html>
