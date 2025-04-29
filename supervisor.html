@@ -302,7 +302,7 @@
         const pane = document.createElement('div');
         pane.className = `tab-pane fade${i===0?' show active':''}`;
         pane.id = `${dec.toLowerCase()}-pane`;
-        pane Holder?
+        pane.setAttribute('role', 'tabpanel');
         pane.role = 'tabpanel';
         paneHolder.appendChild(pane);
 
