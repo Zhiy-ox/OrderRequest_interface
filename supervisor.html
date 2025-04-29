@@ -168,22 +168,14 @@
       }
 
       // 8) Attachments_URL → one "View" button per URL
-      if (Array.isArray(item.Attachments_URL) && item.Attachments_URL.length) {
-        const div = document.createElement('div');
-        div.className = 'd-flex flex-wrap gap-2';
-        item.Attachments_URL.forEach(url => {
-          const btn = Object.assign(document.createElement('button'), {
-            type: 'button',
-            className: 'btn btn-sm btn-outline-primary',
+        const linkE2 = item.Link_of_Materials_or_Equipment
+        ? Object.assign(document.createElement('a'), {
+            href: item.Link_of_Materials_or_Equipment,
+            target: '_blank',
             textContent: 'View'
-          });
-          btn.onclick = () => window.open(url, '_blank', 'noopener');
-          div.appendChild(btn);
-        });
-        addCell(div);
-      } else {
-        addCell('—');
-      }
+          })
+        : '';
+      addCell(linkE2);
 
       // 9) Action (Send) button
       const tdAct = document.createElement('td');
