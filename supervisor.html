@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
-<!--
-  Supervisor Dashboard with Pending, Approved, and Archived Tabs
-  - Archived tab now shows all "Finished" items automatically.
-  - No manual archive button.
-  - Enhanced showError to display HTTP status and response body.
-  - Attachments read from Attachments_URL (array of strings).
--->
 <head>
   <meta charset="UTF-8" />
   <title>Supervisor Order Review Dashboard</title>
   <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
   <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+  />
   <!-- AOS CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css"
+  />
   <style>
     body { background: #f6f8fa; }
     .dashboard-container { padding: 2rem; }
@@ -40,62 +42,11 @@
   <div class="container-fluid dashboard-container">
     <h2 class="mb-3">Order Requests</h2>
 
-    <!-- Tabs -->
-    <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
-      <li class="nav-item">
-        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button">
-          Pending <span class="badge bg-secondary" id="badge-pending">0</span>
-        </button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-pane" type="button">
-          Approved <span class="badge bg-secondary" id="badge-approved">0</span>
-        </button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-pane" type="button">
-          Archived <span class="badge bg-secondary" id="badge-archived">0</span>
-        </button>
-      </li>
-    </ul>
+    <!-- Dynamic Tabs will be injected here -->
+    <ul class="nav nav-tabs" id="decision-tabs" role="tablist"></ul>
+    <div class="tab-content pt-3" id="decision-panes"></div>
 
-    <div class="tab-content pt-3">
-      <!-- Pending -->
-      <div class="tab-pane fade show active" id="pending-pane">
-        <div class="card"><div class="card-body p-0">
-          <div class="table-responsive" style="max-height:78vh;">
-            <table class="table table-striped table-hover align-middle" id="pendingTable">
-              <thead></thead>
-              <tbody id="pendingBody"><tr><td colspan="16" class="text-center py-4">Loading…</td></tr></tbody>
-            </table>
-          </div>
-        </div></div>
-      </div>
-      <!-- Approved -->
-      <div class="tab-pane fade" id="approved-pane">
-        <div class="card"><div class="card-body p-0">
-          <div class="table-responsive" style="max-height:78vh;">
-            <table class="table table-striped table-hover align-middle" id="approvedTable">
-              <thead></thead>
-              <tbody id="approvedBody"><tr><td colspan="16" class="text-center py-4">Loading…</td></tr></tbody>
-            </table>
-          </div>
-        </div></div>
-      </div>
-      <!-- Archived -->
-      <div class="tab-pane fade" id="archived-pane">
-        <div class="card"><div class="card-body p-0">
-          <div class="table-responsive" style="max-height:78vh;">
-            <table class="table table-striped table-hover align-middle" id="archivedTable">
-              <thead></thead>
-              <tbody id="archivedBody"><tr><td colspan="16" class="text-center py-4">Loading…</td></tr></tbody>
-            </table>
-          </div>
-        </div></div>
-      </div>
-    </div>
-
-    <!-- Alert area -->
+    <!-- Alerts -->
     <div id="alertArea" class="mt-4"></div>
   </div>
 
@@ -103,35 +54,33 @@
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    // Endpoints
     const LIST_FETCH_URL  = "https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs";
     const UPDATE_FLOW_URL = "https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo";
+
+    // All possible decisions (will generate one tab each)
     const possibleDecisions = ["Undecided","Followup","Ordered","Denied","Approved","Finished"];
 
-    // Alert helpers
-    function showError(msg) {
+    // Helper: show an alert
+    function showAlert(type, msg) {
       const area = document.getElementById('alertArea');
       area.innerHTML = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>Error:</strong> ${msg}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>`;
-      area.scrollIntoView({ behavior: 'smooth' });
-    }
-    function showInfo(msg) {
-      const area = document.getElementById('alertArea');
-      area.innerHTML = `
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
           ${msg}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
       area.scrollIntoView({ behavior: 'smooth' });
     }
+    function showError(msg) { showAlert('danger', msg); }
+    function showInfo(msg)  { showAlert('success', msg); }
 
-    // Date formatting & option helper
+    // Format ISO date to "DD/MM/YYYY, HH:MM"
     const fmt = iso => !iso ? "" : new Date(iso).toLocaleString("en-GB", {
-      year:'numeric', month:'2-digit', day:'2-digit',
+      day:'2-digit', month:'2-digit', year:'numeric',
       hour:'2-digit', minute:'2-digit'
     });
+
+    // Create <option> elements
     function makeOption(value, selected) {
       const o = document.createElement('option');
       o.value = value; o.textContent = value;
@@ -139,12 +88,12 @@
       return o;
     }
 
-    // Build a single row
+    // Build one table row for "item"
     function buildRow(item, mode, idx) {
       const tr = document.createElement('tr');
       tr.dataset.id = item.ID;
-      tr.setAttribute('data-aos', 'fade-up');
-      tr.setAttribute('data-aos-delay', idx * 60);
+      tr.setAttribute('data-aos','fade-up');
+      tr.setAttribute('data-aos-delay', idx*50);
 
       const addCell = (content, cls) => {
         const td = document.createElement('td');
@@ -154,15 +103,15 @@
         tr.appendChild(td);
       };
 
-      // ID, Requester, Material, Quantity, Unit, Reason
-      addCell(item.ID || "");
-      addCell(item.RequesterName?.DisplayName || "");
-      addCell(item.Materials_or_Equipment_Name || "");
-      addCell(item.Quantity || "");
-      addCell(item.Unit || "");
-      addCell(item.Reason || "", 'preserve-lines');
+      // 1) ID, requester, material, qty, unit, reason
+      addCell(item.ID||"");
+      addCell(item.RequesterName?.DisplayName||"");
+      addCell(item.Materials_or_Equipment_Name||"");
+      addCell(item.Quantity||"");
+      addCell(item.Unit||"");
+      addCell(item.Reason||"",'preserve-lines');
 
-      // Link-of-materials
+      // 2) Link-of-materials
       const linkEl = item.Link_of_Materials_or_Equipment
         ? Object.assign(document.createElement('a'), {
             href: item.Link_of_Materials_or_Equipment,
@@ -172,65 +121,71 @@
         : '';
       addCell(linkEl);
 
-      // Tracking URL
+      // 3) Tracking URL input or text
       if (mode !== 'archived') {
         const inp = Object.assign(document.createElement('input'), {
           type: 'url',
           className: 'form-control form-control-sm',
-          value: item.The_Order_Tracking_URL || '',
+          value: item.The_Order_Tracking_URL||"",
           id: `track-${item.ID}`
         });
         addCell(inp);
       } else {
-        addCell(item.The_Order_Tracking_URL || "");
+        addCell(item.The_Order_Tracking_URL||"");
       }
 
-      // Submitted time
+      // 4) Submitted time
       addCell(fmt(item.Order_Submitted_Time));
 
-      // Decision
+      // 5) Decision dropdown or text
       if (mode !== 'archived') {
         const sel = Object.assign(document.createElement('select'), {
           className: 'form-select form-select-sm',
           id: `decision-${item.ID}`
         });
-        possibleDecisions.forEach(d => sel.appendChild(makeOption(d, item.Decision?.Value || 'Undecided')));
+        possibleDecisions.forEach(d => sel.appendChild(makeOption(d, item.Decision?.Value||'Undecided')));
         addCell(sel);
       } else {
-        addCell(item.Decision?.Value || "");
+        addCell(item.Decision?.Value||"");
       }
 
-      // Cost, Currency, Supply Code
-      addCell(item.Cost || "");
-      addCell(item.Currency || "");
-      addCell(item.Supply_Code || "");
+      // 6) Cost, Currency, Supply Code
+      addCell(item.Cost||"");
+      addCell(item.Currency||"");
+      addCell(item.Supply_Code||"");
 
-      // Comments
+      // 7) Comments textarea or text
       if (mode !== 'archived') {
         const ta = Object.assign(document.createElement('textarea'), {
           className: 'form-control form-control-sm',
           rows: 2,
           id: `comments-${item.ID}`
         });
-        ta.value = item.Comments_by_Supervisor || '';
+        ta.value = item.Comments_by_Supervisor||"";
         addCell(ta);
       } else {
-        addCell(item.Comments_by_Supervisor || "");
+        addCell(item.Comments_by_Supervisor||"");
       }
 
-     // Attachments_URL (as anchor links)
-       const linkE2 = item.Attachments_URL
-        ? Object.assign(document.createElement('a'), {
-            href: item.Attachments_URL,
-            target: '_blank',
+      // 8) Attachments_URL → one "View" button per URL
+      if (Array.isArray(item.Attachments_URL) && item.Attachments_URL.length) {
+        const div = document.createElement('div');
+        div.className = 'd-flex flex-wrap gap-2';
+        item.Attachments_URL.forEach(url => {
+          const btn = Object.assign(document.createElement('button'), {
+            type: 'button',
+            className: 'btn btn-sm btn-outline-primary',
             textContent: 'View'
-          })
-        : '';
-      addCell(linkE2);
+          });
+          btn.onclick = () => window.open(url, '_blank', 'noopener');
+          div.appendChild(btn);
+        });
+        addCell(div);
+      } else {
+        addCell('—');
+      }
 
-
-      
-      // Action button
+      // 9) Action (Send) button
       const tdAct = document.createElement('td');
       if (mode !== 'archived') {
         const btn = Object.assign(document.createElement('button'), {
@@ -245,45 +200,40 @@
       return tr;
     }
 
-    // Load & partition data
+    // Fetch data, partition by decision, and render into each tab
     async function loadData() {
-      const bodies = [
-        document.getElementById('pendingBody'),
-        document.getElementById('approvedBody'),
-        document.getElementById('archivedBody')
-      ];
-      bodies.forEach(b => b.innerHTML = '');
+      // Map decision → tbody element
+      const bodies = {};
+      possibleDecisions.forEach(d => {
+        bodies[d] = document.getElementById(`${d.toLowerCase()}Body`);
+        bodies[d].innerHTML = '';  // clear old
+      });
 
       try {
-        const res = await fetch(LIST_FETCH_URL);
+        const res  = await fetch(LIST_FETCH_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        const pending  = data.filter(i => !['Approved','Finished'].includes(i.Decision?.Value));
-        const approved = data.filter(i => i.Decision?.Value === 'Approved');
-        const archived = data.filter(i => i.Decision?.Value === 'Finished');
+        // Count badges & append rows
+        possibleDecisions.forEach(dec => {
+          const items = data.filter(i => i.Decision?.Value === dec);
+          document.getElementById(`${dec.toLowerCase()}-badge`).textContent = items.length;
+          items.forEach((it, idx) => {
+            const tr = buildRow(it, dec === 'Finished' ? 'archived' : 'pending', idx);
+            bodies[dec].appendChild(tr);
+          });
+          if (items.length === 0) {
+            bodies[dec].innerHTML = `<tr><td colspan="16" class="text-center py-4">No items</td></tr>`;
+          }
+        });
 
-        document.getElementById('badge-pending').textContent  = pending.length;
-        document.getElementById('badge-approved').textContent = approved.length;
-        document.getElementById('badge-archived').textContent = archived.length;
-
-        pending.forEach((it, idx)   => bodies[0].appendChild(buildRow(it,'pending',   idx)));
-        approved.forEach((it, idx)  => bodies[1].appendChild(buildRow(it,'approved',  idx)));
-        archived.forEach((it, idx)  => bodies[2].appendChild(buildRow(it,'archived',  idx)));
-
-        if (pending.length + approved.length + archived.length === 0) {
-          bodies[0].innerHTML = '<tr><td colspan="16" class="text-center py-4">No orders found</td></tr>';
-        }
-
-        AOS.init({ duration: 650, once: true });
+        AOS.init({ duration: 500, once: true });
       } catch (e) {
         showError(`Failed to load orders: ${e.message}`);
-        document.getElementById('pendingBody').innerHTML =
-          '<tr><td colspan="16" class="text-center py-4 text-danger">Error loading data</td></tr>';
       }
     }
 
-    // Submit update & refresh
+    // Send update for one ID, then refresh
     async function submitUpdate(id) {
       const row = document.querySelector(`tr[data-id="${id}"]`);
       if (!row) return;
@@ -306,41 +256,81 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-send"></i>';
-
         if (!response.ok) {
-          const errorText = await response.text();
-          showError(`ID ${id} — HTTP ${response.status}: ${errorText}`);
+          const txt = await response.text();
+          showError(`ID ${id} — HTTP ${response.status}: ${txt}`);
           row.classList.add('table-danger');
-          setTimeout(() => row.classList.remove('table-danger'), 3000);
         } else {
           showInfo(`ID ${id} updated successfully.`);
           row.classList.add('table-success');
-          setTimeout(() => row.classList.remove('table-success'), 1000);
-          await loadData();
+          setTimeout(() => loadData(), 800);
         }
       } catch (err) {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-send"></i>';
         showError(`Network error for ID ${id}: ${err.message}`);
         row.classList.add('table-danger');
-        setTimeout(() => row.classList.remove('table-danger'), 3000);
       }
     }
 
-    // Initialize header & load
+    // On load: generate tabs, headers, then fetch data
     document.addEventListener('DOMContentLoaded', () => {
-      const headerHTML = `
-        <tr>
-          <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th>
-          <th>Quantity</th><th>Unit</th><th>Reason</th><th>Links</th>
-          <th>Tracking URL</th><th>Submitted Time</th><th>Decision</th>
-          <th>Cost</th><th>Currency</th><th>Supply Code</th>
-          <th>Comments</th><th>Attachments_URL</th><th>Action</th>
-        </tr>`;
-      document.querySelectorAll('table thead').forEach(el => el.innerHTML = headerHTML);
+      const tabList    = document.getElementById('decision-tabs');
+      const paneHolder = document.getElementById('decision-panes');
+
+      // Build one nav-tab and pane per decision
+      possibleDecisions.forEach((dec, i) => {
+        // Tab button
+        const li = document.createElement('li');
+        li.className = 'nav-item';
+        const btn = document.createElement('button');
+        btn.className = 'nav-link';
+        if (i === 0) btn.classList.add('active');
+        btn.id = `${dec.toLowerCase()}-tab`;
+        btn.dataset.bsToggle = 'tab';
+        btn.dataset.bsTarget = `#${dec.toLowerCase()}-pane`;
+        btn.type = 'button';
+        btn.innerHTML = `
+          ${dec} <span class="badge bg-secondary" id="${dec.toLowerCase()}-badge">0</span>
+        `;
+        li.appendChild(btn);
+        tabList.appendChild(li);
+
+        // Tab pane with table
+        const pane = document.createElement('div');
+        pane.className = `tab-pane fade${i===0?' show active':''}`;
+        pane.id = `${dec.toLowerCase()}-pane`;
+        pane Holder?
+        pane.role = 'tabpanel';
+        paneHolder.appendChild(pane);
+
+        // Insert card → table
+        pane.innerHTML = `
+          <div class="card">
+            <div class="card-body p-0">
+              <div class="table-responsive" style="max-height:78vh;">
+                <table class="table table-striped table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th><th>Requester Name</th><th>Materials / Equipment Name</th>
+                      <th>Quantity</th><th>Unit</th><th>Reason</th><th>Links</th>
+                      <th>Tracking URL</th><th>Submitted Time</th><th>Decision</th>
+                      <th>Cost</th><th>Currency</th><th>Supply Code</th>
+                      <th>Comments</th><th>Attachments</th><th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="${dec.toLowerCase()}Body">
+                    <tr><td colspan="16" class="text-center py-4">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
       loadData();
     });
   </script>
