@@ -182,9 +182,9 @@
       }
 
       // 8) Attachments_URL → one "View" button per URL
-        const linkE2 = item.Link_of_Materials_or_Equipment
+        const linkE2 = item.Attachments_URL,
         ? Object.assign(document.createElement('a'), {
-            href: item.Link_of_Materials_or_Equipment,
+            href: item.item.Attachments_URL,
             target: '_blank',
             textContent: 'View'
           })
