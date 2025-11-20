@@ -1,703 +1,714 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle, 
-  Search, 
-  Filter, 
-  Bell, 
-  Menu, 
-  User, 
-  FileText, 
-  History, 
-  MoreHorizontal, 
-  ArrowUpRight, 
-  Building2, 
-  Calendar,
-  Download,
-  Briefcase,
-  CreditCard,
-  X,
-  Microscope,
-  Beaker,
-  Zap,
-  GraduationCap,
-  ScrollText,
-  Loader2,
-  RefreshCw,
-  Link as LinkIcon,
-  Truck,
-  Layers,
-  Hexagon
-} from 'lucide-react';
-
-// --- CONFIGURATION: POWER AUTOMATE ENDPOINTS ---
-const API_CONFIG = {
-  GET_URL: 'https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs',
-  UPDATE_URL: 'https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo'
-};
-
-// --- API HELPER FUNCTIONS ---
-const fetchFromSharePoint = async () => {
-  try {
-    const response = await fetch(API_CONFIG.GET_URL, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error("API Error:", error);
-    return null;
-  }
-};
-
-const sendUpdateToSharePoint = async (id, decision, trackingUrl, comment) => {
-  try {
-    const payload = {
-      ID: id,
-      The_Order_Tracking_URL: trackingUrl || "N/A",
-      Decision: decision,
-      Comments_by_Supervisor: comment || ""
-    };
-    const response = await fetch(API_CONFIG.UPDATE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return response.ok;
-  } catch (error) {
-    console.error("API Error:", error);
-    return false;
-  }
-};
-
-// --- MOCK DATA (Soft Matter Context) ---
-const MOCK_REQUISITIONS = [
-  {
-    id: 'REQ-2024-201',
-    requestor: 'Liam Zhang (PhD)',
-    group: 'LC Dynamics',
-    requestDate: '2024-11-18',
-    total: 1250.00,
-    currency: 'USD',
-    status: 'Undecided',
-    priority: 'High',
-    description: '5CB Liquid Crystal & Alignment Layers',
-    grantId: 'ERC-SOFT-LIGHT',
-    items: [
-      { id: 1, name: '4-Cyano-4\'-pentylbiphenyl (5CB), 5g', qty: 2, unit: 'btl', price: 350.00, total: 700.00 },
-      { id: 2, name: 'Polyimide SE-130 (Homeotropic)', qty: 1, unit: 'ea', price: 550.00, total: 550.00 }
-    ],
-    history: [{ date: '2024-11-18 09:00', action: 'Submitted', user: 'Liam Zhang' }],
-    justification: 'Replenishing stock for the new topological defect experiments. Current batch is contaminated.',
-    supplier: 'Merck KGaA',
-    materialLink: 'https://www.sigmaaldrich.com/',
-    trackingUrl: ''
-  },
-  {
-    id: 'REQ-2024-202',
-    requestor: 'Dr. Emily Chen',
-    group: 'Bio-Photonics',
-    requestDate: '2024-11-19',
-    total: 480.00,
-    currency: 'USD',
-    status: 'Undecided',
-    priority: 'Normal',
-    description: 'ITO Coated Glass Slides (25x25mm)',
-    grantId: 'EPSRC-BIO-MAT',
-    items: [
-      { id: 1, name: 'ITO Glass, 100nm, 20 ohm/sq', qty: 5, unit: 'pack', price: 96.00, total: 480.00 }
-    ],
-    history: [{ date: '2024-11-19 11:30', action: 'Submitted', user: 'Emily Chen' }],
-    justification: 'Substrates for electric field switching cells.',
-    supplier: 'Diamond Coatings',
-    trackingUrl: ''
-  },
-  {
-    id: 'REQ-2024-198',
-    requestor: 'Prof. A. Smith',
-    group: 'Admin',
-    requestDate: '2024-11-15',
-    total: 2100.00,
-    currency: 'GBP',
-    status: 'Approved',
-    priority: 'Normal',
-    description: 'New Spin Coater Chucks',
-    grantId: 'INSTITUTE-FUND',
-    items: [
-      { id: 1, name: 'Vacuum Chuck for 10mm Substrates', qty: 1, unit: 'ea', price: 2100.00, total: 2100.00 }
-    ],
-    history: [
-      { date: '2024-11-15 10:00', action: 'Submitted', user: 'A. Smith' },
-      { date: '2024-11-15 14:00', action: 'Approved', user: 'Finance Team' }
-    ],
-    justification: 'Required for small sample processing.',
-    supplier: 'Laurell Technologies',
-    trackingUrl: 'https://fedex.com/track/123456'
-  }
-];
-
-const LabProcurementSystem = () => {
-  // State
-  const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  
-  // Action State
-  const [trackingInput, setTrackingInput] = useState('');
-  const [commentInput, setCommentInput] = useState('');
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  
-  // Navigation State
-  const [activeView, setActiveView] = useState('approvals'); 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  // --- Data Loading ---
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    const data = await fetchFromSharePoint();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMP Order System | Soft Matter Photonics</title>
     
-    if (data && Array.isArray(data)) {
-        const formattedData = data.map(item => ({
-            id: item.ID,
-            requestor: item.RequesterName?.DisplayName || 'Unknown',
-            group: 'Research Member',
-            requestDate: item.Order_Submitted_Time ? new Date(item.Order_Submitted_Time).toLocaleDateString('en-GB') : 'N/A',
-            total: parseFloat(item.Cost || 0),
-            currency: item.Currency || 'USD',
-            status: item.Decision?.Value || 'Undecided', 
-            priority: 'Normal',
-            description: item.Materials_or_Equipment_Name || 'Unspecified Material',
-            grantId: item.Supply_Code || 'N/A',
-            items: [{
-                id: 1,
-                name: item.Materials_or_Equipment_Name,
-                qty: item.Quantity || 1,
-                unit: item.Unit || 'ea',
-                price: parseFloat(item.Cost || 0),
-                total: parseFloat(item.Cost || 0)
-            }],
-            history: [],
-            justification: item.Reason || '',
-            materialLink: item.Link_of_Materials_or_Equipment,
-            attachmentLink: item.Attachments_URL,
-            trackingUrl: item.The_Order_Tracking_URL,
-            supervisorComment: item.Comments_by_Supervisor
-        }));
-        setOrders(formattedData);
-    } else {
-        // Fallback to Soft Matter Mock Data
-        setOrders(MOCK_REQUISITIONS);
-        if(data === null) showToast("Using Offline Mode (Mock Data)", "error");
-    }
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-      if (selectedOrder) {
-          setTrackingInput(selectedOrder.trackingUrl || '');
-          setCommentInput(selectedOrder.supervisorComment || '');
-      }
-  }, [selectedOrderId]);
-
-  // --- Helpers ---
-  const showToast = (msg, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // --- Filtering ---
-  const filteredOrders = useMemo(() => {
-    let viewSet = orders;
-    if (activeView === 'approvals') {
-        viewSet = orders.filter(o => o.status === 'Undecided' || o.status === 'Followup');
-    } else if (activeView === 'history') {
-        viewSet = orders.filter(o => o.status !== 'Undecided' && o.status !== 'Followup');
-    }
-
-    return viewSet.filter(order => {
-      const matchesSearch = 
-        String(order.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.requestor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, searchQuery, statusFilter, activeView]);
-
-  useMemo(() => {
-    if (activeView !== 'vendors' && filteredOrders.length > 0) {
-        if (!selectedOrderId || !filteredOrders.find(o => o.id === selectedOrderId)) {
-            setSelectedOrderId(filteredOrders[0].id);
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Import Map for React modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "lucide-react": "https://esm.sh/lucide-react@0.263.1"
         }
-    } else {
-        setSelectedOrderId(null);
-    }
-  }, [filteredOrders, activeView, selectedOrderId]);
-
-  const selectedOrder = useMemo(() => orders.find(o => o.id === selectedOrderId), [orders, selectedOrderId]);
-
-  const stats = useMemo(() => {
-    const pending = orders.filter(o => o.status === 'Undecided');
-    const totalValue = pending.reduce((acc, curr) => acc + curr.total, 0);
-    return {
-      pendingCount: pending.length,
-      pendingValue: totalValue,
-      urgentCount: pending.filter(o => o.status === 'Followup').length
-    };
-  }, [orders]);
-
-  // --- Actions ---
-  const handleDecision = async (decision) => {
-    if (!selectedOrder) return;
-    const originalOrders = [...orders];
-    const updatedOrders = orders.map(o => 
-      o.id === selectedOrderId ? { ...o, status: decision, trackingUrl: trackingInput, supervisorComment: commentInput } : o
-    );
-    setOrders(updatedOrders);
-    if(decision === 'Denied') setIsRejectModalOpen(false);
-    showToast(`Order ${selectedOrder.id} updated to ${decision}`);
-    const success = await sendUpdateToSharePoint(selectedOrder.id, decision, trackingInput, commentInput);
-    if (!success) {
-        setOrders(originalOrders);
-        showToast("Sync failed. Check connection.", 'error');
-    }
-  };
-
-  // --- UI Components ---
-  const StatusBadge = ({ status }) => {
-    const styles = {
-      Undecided: 'bg-slate-100 text-slate-600 border-slate-200',
-      Followup: 'bg-amber-100 text-amber-700 border-amber-200',
-      Approved: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100',
-      Ordered: 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100',
-      Denied: 'bg-rose-50 text-rose-700 border-rose-200 ring-1 ring-rose-100',
-      Finished: 'bg-gray-50 text-gray-600 border-gray-200'
-    };
+      }
+    </script>
     
-    const icons = {
-      Undecided: <AlertCircle size={12} className="mr-1.5"/>,
-      Followup: <RefreshCw size={12} className="mr-1.5"/>,
-      Denied: <XCircle size={12} className="mr-1.5"/>,
-      Default: <CheckCircle2 size={12} className="mr-1.5"/>
-    };
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
 
-    return (
-      <span className={`flex items-center w-fit px-2.5 py-1 rounded-md text-[11px] font-semibold border ${styles[status] || 'bg-slate-100'}`}>
-        {icons[status] || icons.Default}
-        {status}
-      </span>
-    );
-  };
+    <script type="text/babel" data-type="module">
+        import React, { useState, useMemo, useEffect, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+          CheckCircle2, XCircle, AlertCircle, Search, Filter, Bell, Menu, User, 
+          FileText, History, MoreHorizontal, ArrowUpRight, Building2, Calendar, 
+          Download, Briefcase, CreditCard, X, Microscope, Beaker, Zap, 
+          GraduationCap, ScrollText, Loader2, RefreshCw, Link as LinkIcon, 
+          Truck, Layers, Hexagon 
+        } from 'lucide-react';
 
-  return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      
-      {/* --- Sidebar --- */}
-      <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-300 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static shrink-0 shadow-xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-24 flex items-center px-6 border-b border-slate-800/50 justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-indigo-500/30 overflow-hidden">
-                {/* Oxford Logo Placeholder / Public URL */}
-                <img 
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Oxford_University_Coat_Of_Arms.svg/1200px-Oxford_University_Coat_Of_Arms.svg.png" 
-                    alt="Oxford Logo" 
-                    className="w-8 h-8 object-contain"
-                />
-            </div>
-            <div className="flex flex-col">
-                <span className="text-white font-bold text-sm tracking-tight leading-none">Soft Matter</span>
-                <span className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold mt-0.5">Photonics Group</span>
-                <span className="text-[8px] text-slate-500 mt-0.5">University of Oxford</span>
-            </div>
-          </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
-            <X size={20}/>
-          </button>
-        </div>
+        // --- CONFIGURATION: POWER AUTOMATE ENDPOINTS ---
+        const API_CONFIG = {
+          GET_URL: 'https://prod-108.westeurope.logic.azure.com:443/workflows/82ca49f033d84aa8807da35568348a60/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=OnER2k0ivse9M9rXp7mwortbxjGFVuPvn1OZsMHqhXs',
+          UPDATE_URL: 'https://prod-168.westeurope.logic.azure.com:443/workflows/0d2ecc042a8745f58b40ae8e35cdc47b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=am6h8CwzxHZWuBRAmtmhVTdaUVkBihbJP7X4LWsV3Xo'
+        };
 
-        <nav className="flex-1 py-8 px-4 space-y-2">
-          <div className="px-2 text-[10px] font-bold uppercase text-slate-500 mb-3 tracking-wider flex items-center gap-2">
-             <Layers size={10} /> Procurement
-          </div>
+        // --- API HELPER FUNCTIONS ---
+        const fetchFromSharePoint = async () => {
+          try {
+            const response = await fetch(API_CONFIG.GET_URL, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+          } catch (error) {
+            console.error("API Error:", error);
+            return null;
+          }
+        };
+
+        const sendUpdateToSharePoint = async (id, decision, trackingUrl, comment) => {
+          try {
+            const payload = {
+              ID: id,
+              The_Order_Tracking_URL: trackingUrl || "N/A",
+              Decision: decision,
+              Comments_by_Supervisor: comment || ""
+            };
+            const response = await fetch(API_CONFIG.UPDATE_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            return response.ok;
+          } catch (error) {
+            console.error("API Error:", error);
+            return false;
+          }
+        };
+
+        // --- MOCK DATA (Soft Matter Context) ---
+        const MOCK_REQUISITIONS = [
+          {
+            id: 'REQ-2024-201',
+            requestor: 'Liam Zhang (PhD)',
+            group: 'LC Dynamics',
+            requestDate: '2024-11-18',
+            total: 1250.00,
+            currency: 'USD',
+            status: 'Undecided',
+            priority: 'High',
+            description: '5CB Liquid Crystal & Alignment Layers',
+            grantId: 'ERC-SOFT-LIGHT',
+            items: [
+              { id: 1, name: '4-Cyano-4\'-pentylbiphenyl (5CB), 5g', qty: 2, unit: 'btl', price: 350.00, total: 700.00 },
+              { id: 2, name: 'Polyimide SE-130 (Homeotropic)', qty: 1, unit: 'ea', price: 550.00, total: 550.00 }
+            ],
+            history: [{ date: '2024-11-18 09:00', action: 'Submitted', user: 'Liam Zhang' }],
+            justification: 'Replenishing stock for the new topological defect experiments. Current batch is contaminated.',
+            supplier: 'Merck KGaA',
+            materialLink: 'https://www.sigmaaldrich.com/',
+            trackingUrl: ''
+          },
+          {
+            id: 'REQ-2024-202',
+            requestor: 'Dr. Emily Chen',
+            group: 'Bio-Photonics',
+            requestDate: '2024-11-19',
+            total: 480.00,
+            currency: 'USD',
+            status: 'Undecided',
+            priority: 'Normal',
+            description: 'ITO Coated Glass Slides (25x25mm)',
+            grantId: 'EPSRC-BIO-MAT',
+            items: [
+              { id: 1, name: 'ITO Glass, 100nm, 20 ohm/sq', qty: 5, unit: 'pack', price: 96.00, total: 480.00 }
+            ],
+            history: [{ date: '2024-11-19 11:30', action: 'Submitted', user: 'Emily Chen' }],
+            justification: 'Substrates for electric field switching cells.',
+            supplier: 'Diamond Coatings',
+            trackingUrl: ''
+          },
+          {
+            id: 'REQ-2024-198',
+            requestor: 'Prof. A. Smith',
+            group: 'Admin',
+            requestDate: '2024-11-15',
+            total: 2100.00,
+            currency: 'GBP',
+            status: 'Approved',
+            priority: 'Normal',
+            description: 'New Spin Coater Chucks',
+            grantId: 'INSTITUTE-FUND',
+            items: [
+              { id: 1, name: 'Vacuum Chuck for 10mm Substrates', qty: 1, unit: 'ea', price: 2100.00, total: 2100.00 }
+            ],
+            history: [
+              { date: '2024-11-15 10:00', action: 'Submitted', user: 'A. Smith' },
+              { date: '2024-11-15 14:00', action: 'Approved', user: 'Finance Team' }
+            ],
+            justification: 'Required for small sample processing.',
+            supplier: 'Laurell Technologies',
+            trackingUrl: 'https://fedex.com/track/123456'
+          }
+        ];
+
+        const LabProcurementSystem = () => {
+          // State
+          const [orders, setOrders] = useState([]);
+          const [isLoading, setIsLoading] = useState(true);
+          const [selectedOrderId, setSelectedOrderId] = useState(null);
+          const [searchQuery, setSearchQuery] = useState('');
+          const [statusFilter, setStatusFilter] = useState('All');
           
-          <button 
-            onClick={() => setActiveView('approvals')}
-            className={`w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden ${activeView === 'approvals' ? 'bg-indigo-600/10 text-indigo-300 border border-indigo-500/20' : 'hover:bg-slate-800/50 hover:text-white text-slate-400 border border-transparent'}`}
-          >
-            <CheckCircle2 size={18} className={`mr-3 transition-colors ${activeView === 'approvals' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
-            Approvals
-            {stats.pendingCount > 0 && (
-                <span className="ml-auto bg-indigo-500 text-white text-[10px] font-bold py-0.5 px-2 rounded-full shadow-sm min-w-[24px] text-center">{stats.pendingCount}</span>
-            )}
-          </button>
+          // Action State
+          const [trackingInput, setTrackingInput] = useState('');
+          const [commentInput, setCommentInput] = useState('');
+          const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+          const [rejectReason, setRejectReason] = useState('');
           
-          <button 
-            onClick={() => setActiveView('history')}
-            className={`w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeView === 'history' ? 'bg-indigo-600/10 text-indigo-300 border border-indigo-500/20' : 'hover:bg-slate-800/50 hover:text-white text-slate-400 border border-transparent'}`}
-          >
-            <History size={18} className={`mr-3 transition-colors ${activeView === 'history' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
-            History
-          </button>
-          
-          <div className="px-2 text-[10px] font-bold uppercase text-slate-500 mt-8 mb-3 tracking-wider flex items-center gap-2">
-             <Beaker size={10} /> Admin
-          </div>
+          // Navigation State
+          const [activeView, setActiveView] = useState('approvals'); 
+          const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+          const [toast, setToast] = useState(null);
 
-          <button className="w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent transition-all">
-             <User size={18} className="mr-3 text-slate-500 group-hover:text-white"/> Lab Members
-          </button>
-        </nav>
+          // --- Data Loading ---
+          const loadData = useCallback(async () => {
+            setIsLoading(true);
+            const data = await fetchFromSharePoint();
+            
+            if (data && Array.isArray(data)) {
+                const formattedData = data.map(item => ({
+                    id: item.ID,
+                    requestor: item.RequesterName?.DisplayName || 'Unknown',
+                    group: 'Research Member',
+                    requestDate: item.Order_Submitted_Time ? new Date(item.Order_Submitted_Time).toLocaleDateString('en-GB') : 'N/A',
+                    total: parseFloat(item.Cost || 0),
+                    currency: item.Currency || 'USD',
+                    status: item.Decision?.Value || 'Undecided', 
+                    priority: 'Normal',
+                    description: item.Materials_or_Equipment_Name || 'Unspecified Material',
+                    grantId: item.Supply_Code || 'N/A',
+                    items: [{
+                        id: 1,
+                        name: item.Materials_or_Equipment_Name,
+                        qty: item.Quantity || 1,
+                        unit: item.Unit || 'ea',
+                        price: parseFloat(item.Cost || 0),
+                        total: parseFloat(item.Cost || 0)
+                    }],
+                    history: [],
+                    justification: item.Reason || '',
+                    materialLink: item.Link_of_Materials_or_Equipment,
+                    attachmentLink: item.Attachments_URL,
+                    trackingUrl: item.The_Order_Tracking_URL,
+                    supervisorComment: item.Comments_by_Supervisor
+                }));
+                setOrders(formattedData);
+            } else {
+                setOrders(MOCK_REQUISITIONS);
+                if(data === null) {
+                    // Silent fail to mock data is okay for demo, but log it
+                    console.log("Using Offline Mode (Mock Data)");
+                }
+            }
+            setIsLoading(false);
+          }, []);
 
-        <div className="p-4 m-4 rounded-xl bg-slate-900/50 border border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center text-white font-bold border-2 border-slate-500 shadow-sm">
-                <GraduationCap size={18} />
-            </div>
-            <div className="flex flex-col">
-              <p className="text-xs font-bold text-white">Prof. Supervisor</p>
-              <p className="text-[10px] text-slate-400">Head of Group</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+          useEffect(() => {
+            loadData();
+          }, [loadData]);
 
-      {/* --- Main Content --- */}
-      <main className="flex-1 flex flex-col min-w-0 relative bg-slate-50">
-        
-        {/* Top Header */}
-        <header className="h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
-          <div className="flex items-center">
-            <button onClick={() => setIsSidebarOpen(true)} className="mr-4 lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-600">
-                <Menu size={20} />
-            </button>
-            <div>
-                <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-                    {activeView === 'approvals' ? 'SMP Order System' : 'Processed Orders'}
-                </h1>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                    {activeView === 'approvals' ? 'Review and approve pending lab orders' : 'Archive of all past transactions'}
-                </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button 
-                onClick={loadData} 
-                className={`p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all ${isLoading ? 'animate-spin bg-indigo-50 text-indigo-600' : ''}`}
-                title="Sync Data"
-            >
-               <RefreshCw size={18} />
-            </button>
-            <div className="h-8 w-px bg-slate-200 mx-2"></div>
-            <div className="relative cursor-pointer group p-2 rounded-lg hover:bg-slate-100 transition-colors">
-               <Bell className="text-slate-500 group-hover:text-indigo-600 transition-colors" size={20} />
-               {stats.pendingCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>}
-            </div>
-          </div>
-        </header>
+          useEffect(() => {
+              if (selectedOrder) {
+                  setTrackingInput(selectedOrder.trackingUrl || '');
+                  setCommentInput(selectedOrder.supervisorComment || '');
+              }
+          }, [selectedOrderId]);
 
-        {/* Content Area */}
-        <div className="flex-1 flex overflow-hidden px-8 pb-8 pt-6 gap-6">
-            {isLoading && orders.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center flex-col text-slate-400 animate-pulse">
-                    <div className="bg-white p-4 rounded-full shadow-xl mb-4">
-                        <Loader2 size={32} className="animate-spin text-indigo-500" />
+          // --- Helpers ---
+          const showToast = (msg, type = 'success') => {
+            setToast({ msg, type });
+            setTimeout(() => setToast(null), 3000);
+          };
+
+          // --- Filtering ---
+          const filteredOrders = useMemo(() => {
+            let viewSet = orders;
+            if (activeView === 'approvals') {
+                viewSet = orders.filter(o => o.status === 'Undecided' || o.status === 'Followup');
+            } else if (activeView === 'history') {
+                viewSet = orders.filter(o => o.status !== 'Undecided' && o.status !== 'Followup');
+            }
+
+            return viewSet.filter(order => {
+              const matchesSearch = 
+                String(order.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.requestor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.description.toLowerCase().includes(searchQuery.toLowerCase());
+              
+              const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
+              return matchesSearch && matchesStatus;
+            });
+          }, [orders, searchQuery, statusFilter, activeView]);
+
+          useMemo(() => {
+            if (activeView !== 'vendors' && filteredOrders.length > 0) {
+                if (!selectedOrderId || !filteredOrders.find(o => o.id === selectedOrderId)) {
+                    setSelectedOrderId(filteredOrders[0].id);
+                }
+            } else {
+                setSelectedOrderId(null);
+            }
+          }, [filteredOrders, activeView, selectedOrderId]);
+
+          const selectedOrder = useMemo(() => orders.find(o => o.id === selectedOrderId), [orders, selectedOrderId]);
+
+          const stats = useMemo(() => {
+            const pending = orders.filter(o => o.status === 'Undecided');
+            const totalValue = pending.reduce((acc, curr) => acc + curr.total, 0);
+            return {
+              pendingCount: pending.length,
+              pendingValue: totalValue,
+              urgentCount: pending.filter(o => o.status === 'Followup').length
+            };
+          }, [orders]);
+
+          // --- Actions ---
+          const handleDecision = async (decision) => {
+            if (!selectedOrder) return;
+            const originalOrders = [...orders];
+            const updatedOrders = orders.map(o => 
+              o.id === selectedOrderId ? { ...o, status: decision, trackingUrl: trackingInput, supervisorComment: commentInput } : o
+            );
+            setOrders(updatedOrders);
+            if(decision === 'Denied') setIsRejectModalOpen(false);
+            showToast(`Order ${selectedOrder.id} updated to ${decision}`);
+            const success = await sendUpdateToSharePoint(selectedOrder.id, decision, trackingInput, commentInput);
+            if (!success) {
+                setOrders(originalOrders);
+                showToast("Sync failed. Check connection.", 'error');
+            }
+          };
+
+          // --- UI Components ---
+          const StatusBadge = ({ status }) => {
+            const styles = {
+              Undecided: 'bg-slate-100 text-slate-600 border-slate-200',
+              Followup: 'bg-amber-100 text-amber-700 border-amber-200',
+              Approved: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100',
+              Ordered: 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100',
+              Denied: 'bg-rose-50 text-rose-700 border-rose-200 ring-1 ring-rose-100',
+              Finished: 'bg-gray-50 text-gray-600 border-gray-200'
+            };
+            
+            const icons = {
+              Undecided: <AlertCircle size={12} className="mr-1.5"/>,
+              Followup: <RefreshCw size={12} className="mr-1.5"/>,
+              Denied: <XCircle size={12} className="mr-1.5"/>,
+              Default: <CheckCircle2 size={12} className="mr-1.5"/>
+            };
+
+            return (
+              <span className={`flex items-center w-fit px-2.5 py-1 rounded-md text-[11px] font-semibold border ${styles[status] || 'bg-slate-100'}`}>
+                {icons[status] || icons.Default}
+                {status}
+              </span>
+            );
+          };
+
+          return (
+            <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+              
+              {/* --- Sidebar --- */}
+              <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-300 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static shrink-0 shadow-xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="h-24 flex items-center px-6 border-b border-slate-800/50 justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-indigo-500/30 overflow-hidden">
+                        {/* Oxford Logo Placeholder / Public URL */}
+                        <img 
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Oxford_University_Coat_Of_Arms.svg/1200px-Oxford_University_Coat_Of_Arms.svg.png" 
+                            alt="Oxford Logo" 
+                            className="w-8 h-8 object-contain"
+                        />
                     </div>
-                    <p className="text-sm font-medium text-slate-500">Syncing with Lab Database...</p>
+                    <div className="flex flex-col">
+                        <span className="text-white font-bold text-sm tracking-tight leading-none">Soft Matter</span>
+                        <span className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold mt-0.5">Photonics Group</span>
+                        <span className="text-[8px] text-slate-500 mt-0.5">University of Oxford</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+                    <X size={20}/>
+                  </button>
                 </div>
-            ) : (
-                <>
-                    {/* List Column */}
-                    <div className="w-2/5 flex flex-col min-w-[320px]">
-                        {/* Filter Bar */}
-                        <div className="bg-white rounded-t-xl border border-slate-200 border-b-0 p-3 flex justify-between items-center bg-slate-50/50 backdrop-blur-sm">
-                            <div className="flex items-center gap-2 px-1">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Requests</span>
-                                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{filteredOrders.length}</span>
-                            </div>
-                            <div className="relative group">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search ID, Material..." 
-                                    className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        
-                        {/* Order List */}
-                        <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm overflow-hidden flex-1 overflow-y-auto">
-                            {filteredOrders.map(order => (
-                                <div 
-                                    key={order.id}
-                                    onClick={() => setSelectedOrderId(order.id)}
-                                    className={`p-4 border-b border-slate-100 cursor-pointer transition-all hover:bg-slate-50 relative group ${selectedOrderId === order.id ? 'bg-indigo-50/70' : ''}`}
-                                >
-                                    {selectedOrderId === order.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>}
-                                    
-                                    <div className="flex justify-between items-start mb-1.5">
-                                        <span className={`font-mono text-[11px] font-semibold transition-colors ${selectedOrderId === order.id ? 'text-indigo-600' : 'text-slate-500 group-hover:text-indigo-600'}`}>
-                                            #{order.id}
-                                        </span>
-                                        <span className="text-[10px] text-slate-400 font-medium">{order.requestDate}</span>
-                                    </div>
-                                    
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className={`text-sm font-bold truncate pr-2 ${selectedOrderId === order.id ? 'text-indigo-900' : 'text-slate-700'}`}>
-                                            {order.description}
-                                        </h3>
-                                    </div>
-                                    
-                                    <div className="flex justify-between items-center">
-                                        <StatusBadge status={order.status} />
-                                        <span className="font-mono font-bold text-slate-700 text-sm tracking-tight">{order.currency} {order.total.toLocaleString()}</span>
-                                    </div>
-                                    
-                                    <div className="mt-3 pt-2 border-t border-slate-100/80 flex items-center gap-3 text-[11px] text-slate-500">
-                                        <div className="flex items-center gap-1.5">
-                                            <User size={12} className="text-slate-400"/> {order.requestor.split(' ')[0]}
-                                        </div>
-                                        <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Beaker size={12} className="text-slate-400"/> {order.group}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            
-                            {filteredOrders.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 min-h-[200px]">
-                                    <div className="bg-slate-50 p-4 rounded-full mb-3">
-                                        <Briefcase size={24} className="opacity-30" />
-                                    </div>
-                                    <p className="text-xs font-medium">No matching requisitions</p>
-                                </div>
-                            )}
-                        </div>
+
+                <nav className="flex-1 py-8 px-4 space-y-2">
+                  <div className="px-2 text-[10px] font-bold uppercase text-slate-500 mb-3 tracking-wider flex items-center gap-2">
+                     <Layers size={10} /> Procurement
+                  </div>
+                  
+                  <button 
+                    onClick={() => setActiveView('approvals')}
+                    className={`w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden ${activeView === 'approvals' ? 'bg-indigo-600/10 text-indigo-300 border border-indigo-500/20' : 'hover:bg-slate-800/50 hover:text-white text-slate-400 border border-transparent'}`}
+                  >
+                    <CheckCircle2 size={18} className={`mr-3 transition-colors ${activeView === 'approvals' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
+                    Approvals
+                    {stats.pendingCount > 0 && (
+                        <span className="ml-auto bg-indigo-500 text-white text-[10px] font-bold py-0.5 px-2 rounded-full shadow-sm min-w-[24px] text-center">{stats.pendingCount}</span>
+                    )}
+                  </button>
+                  
+                  <button 
+                    onClick={() => setActiveView('history')}
+                    className={`w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeView === 'history' ? 'bg-indigo-600/10 text-indigo-300 border border-indigo-500/20' : 'hover:bg-slate-800/50 hover:text-white text-slate-400 border border-transparent'}`}
+                  >
+                    <History size={18} className={`mr-3 transition-colors ${activeView === 'history' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
+                    History
+                  </button>
+                  
+                  <div className="px-2 text-[10px] font-bold uppercase text-slate-500 mt-8 mb-3 tracking-wider flex items-center gap-2">
+                     <Beaker size={10} /> Admin
+                  </div>
+
+                  <button className="w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent transition-all">
+                     <User size={18} className="mr-3 text-slate-500 group-hover:text-white"/> Lab Members
+                  </button>
+                </nav>
+
+                <div className="p-4 m-4 rounded-xl bg-slate-900/50 border border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center text-white font-bold border-2 border-slate-500 shadow-sm">
+                        <GraduationCap size={18} />
                     </div>
+                    <div className="flex flex-col">
+                      <p className="text-xs font-bold text-white">Prof. Supervisor</p>
+                      <p className="text-[10px] text-slate-400">Head of Group</p>
+                    </div>
+                  </div>
+                </div>
+              </aside>
 
-                    {/* Detail Panel */}
-                    <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
-                        {selectedOrder ? (
+              {/* --- Main Content --- */}
+              <main className="flex-1 flex flex-col min-w-0 relative bg-slate-50">
+                
+                {/* Top Header */}
+                <header className="h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
+                  <div className="flex items-center">
+                    <button onClick={() => setIsSidebarOpen(true)} className="mr-4 lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-600">
+                        <Menu size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+                            {activeView === 'approvals' ? 'SMP Order System' : 'Processed Orders'}
+                        </h1>
+                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                            {activeView === 'approvals' ? 'Review and approve pending lab orders' : 'Archive of all past transactions'}
+                        </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button 
+                        onClick={loadData} 
+                        className={`p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all ${isLoading ? 'animate-spin bg-indigo-50 text-indigo-600' : ''}`}
+                        title="Sync Data"
+                    >
+                       <RefreshCw size={18} />
+                    </button>
+                    <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                    <div className="relative cursor-pointer group p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                       <Bell className="text-slate-500 group-hover:text-indigo-600 transition-colors" size={20} />
+                       {stats.pendingCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>}
+                    </div>
+                  </div>
+                </header>
+
+                {/* Content Area */}
+                <div className="flex-1 flex overflow-hidden px-8 pb-8 pt-6 gap-6">
+                    {isLoading && orders.length === 0 ? (
+                        <div className="flex-1 flex items-center justify-center flex-col text-slate-400 animate-pulse">
+                            <div className="bg-white p-4 rounded-full shadow-xl mb-4">
+                                <Loader2 size={32} className="animate-spin text-indigo-500" />
+                            </div>
+                            <p className="text-sm font-medium text-slate-500">Syncing with Lab Database...</p>
+                        </div>
+                    ) : (
                         <>
-                            {/* Detail Header */}
-                            <div className="p-6 border-b border-slate-200 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h1 className="text-xl font-bold text-slate-900 leading-tight">{selectedOrder.description}</h1>
-                                            <StatusBadge status={selectedOrder.status} />
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                                            <span className="flex items-center bg-slate-100 px-2.5 py-1 rounded-md font-medium text-slate-600 border border-slate-200">
-                                                <FileText size={12} className="mr-1.5 text-slate-400"/> {selectedOrder.id}
-                                            </span>
-                                            <span className="flex items-center bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md font-mono font-medium border border-indigo-100">
-                                                <Building2 size={12} className="mr-1.5"/> {selectedOrder.grantId}
-                                            </span>
-                                        </div>
+                            {/* List Column */}
+                            <div className="w-2/5 flex flex-col min-w-[320px]">
+                                {/* Filter Bar */}
+                                <div className="bg-white rounded-t-xl border border-slate-200 border-b-0 p-3 flex justify-between items-center bg-slate-50/50 backdrop-blur-sm">
+                                    <div className="flex items-center gap-2 px-1">
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Requests</span>
+                                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{filteredOrders.length}</span>
                                     </div>
-                                    <div className="text-right bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                                        <div className="text-2xl font-bold text-slate-800 tracking-tight">{selectedOrder.currency} {selectedOrder.total.toLocaleString()}</div>
-                                        <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">Total Est. Cost</div>
+                                    <div className="relative group">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search ID, Material..." 
+                                            className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
                                     </div>
                                 </div>
-
-                                {/* Supervisor Controls Area */}
-                                <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/60 space-y-3">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Supervisor Comments</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                                                placeholder="Add internal notes here..."
-                                                value={commentInput}
-                                                onChange={(e) => setCommentInput(e.target.value)}
-                                            />
+                                
+                                {/* Order List */}
+                                <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm overflow-hidden flex-1 overflow-y-auto">
+                                    {filteredOrders.map(order => (
+                                        <div 
+                                            key={order.id}
+                                            onClick={() => setSelectedOrderId(order.id)}
+                                            className={`p-4 border-b border-slate-100 cursor-pointer transition-all hover:bg-slate-50 relative group ${selectedOrderId === order.id ? 'bg-indigo-50/70' : ''}`}
+                                        >
+                                            {selectedOrderId === order.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>}
+                                            
+                                            <div className="flex justify-between items-start mb-1.5">
+                                                <span className={`font-mono text-[11px] font-semibold transition-colors ${selectedOrderId === order.id ? 'text-indigo-600' : 'text-slate-500 group-hover:text-indigo-600'}`}>
+                                                    #{order.id}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-medium">{order.requestDate}</span>
+                                            </div>
+                                            
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h3 className={`text-sm font-bold truncate pr-2 ${selectedOrderId === order.id ? 'text-indigo-900' : 'text-slate-700'}`}>
+                                                    {order.description}
+                                                </h3>
+                                            </div>
+                                            
+                                            <div className="flex justify-between items-center">
+                                                <StatusBadge status={order.status} />
+                                                <span className="font-mono font-bold text-slate-700 text-sm tracking-tight">{order.currency} {order.total.toLocaleString()}</span>
+                                            </div>
+                                            
+                                            <div className="mt-3 pt-2 border-t border-slate-100/80 flex items-center gap-3 text-[11px] text-slate-500">
+                                                <div className="flex items-center gap-1.5">
+                                                    <User size={12} className="text-slate-400"/> {order.requestor.split(' ')[0]}
+                                                </div>
+                                                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Beaker size={12} className="text-slate-400"/> {order.group}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Tracking / URL</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                                                placeholder="e.g. https://courier.com/track/..."
-                                                value={trackingInput}
-                                                onChange={(e) => setTrackingInput(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    ))}
                                     
-                                    {/* Action Buttons */}
-                                    {activeView === 'approvals' && (
-                                        <div className="flex gap-2 pt-2">
-                                            <button 
-                                                onClick={() => handleDecision('Approved')}
-                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-emerald-200"
-                                            >
-                                                <CheckCircle2 size={16} /> Approve
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDecision('Ordered')}
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-blue-200"
-                                            >
-                                                <Truck size={16} /> Mark Ordered
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDecision('Followup')}
-                                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-amber-200"
-                                            >
-                                                <AlertCircle size={16} /> Follow-up
-                                            </button>
-                                            <button 
-                                                onClick={() => { setRejectReason(commentInput); setIsRejectModalOpen(true); }}
-                                                className="flex-1 bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2"
-                                            >
-                                                <XCircle size={16} /> Deny
-                                            </button>
+                                    {filteredOrders.length === 0 && (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 min-h-[200px]">
+                                            <div className="bg-slate-50 p-4 rounded-full mb-3">
+                                                <Briefcase size={24} className="opacity-30" />
+                                            </div>
+                                            <p className="text-xs font-medium">No matching requisitions</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Detail Content Scrollable */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
-                                {/* Items Table */}
-                                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center gap-2">
-                                        <Microscope size={14} className="text-indigo-500"/>
-                                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Requisition Items</h3>
-                                    </div>
-                                    <table className="w-full text-xs text-left">
-                                        <thead className="bg-white text-slate-500 font-semibold border-b border-slate-100">
-                                            <tr>
-                                                <th className="px-4 py-3">Item Description</th>
-                                                <th className="px-4 py-3 text-right">Qty</th>
-                                                <th className="px-4 py-3 text-right">Unit Price</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {selectedOrder.items.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50/50">
-                                                    <td className="px-4 py-3">
-                                                        <div className="font-medium text-slate-800">{item.name}</div>
-                                                        {item.pn && <div className="text-slate-400 text-[10px] mt-0.5">PN: {item.pn}</div>}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right text-slate-600 font-medium">{item.qty} {item.unit}</td>
-                                                    <td className="px-4 py-3 text-right text-slate-600 font-mono">{item.price}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            {/* Detail Panel */}
+                            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
+                                {selectedOrder ? (
+                                <>
+                                    {/* Detail Header */}
+                                    <div className="p-6 border-b border-slate-200 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <h1 className="text-xl font-bold text-slate-900 leading-tight">{selectedOrder.description}</h1>
+                                                    <StatusBadge status={selectedOrder.status} />
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                                                    <span className="flex items-center bg-slate-100 px-2.5 py-1 rounded-md font-medium text-slate-600 border border-slate-200">
+                                                        <FileText size={12} className="mr-1.5 text-slate-400"/> {selectedOrder.id}
+                                                    </span>
+                                                    <span className="flex items-center bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md font-mono font-medium border border-indigo-100">
+                                                        <Building2 size={12} className="mr-1.5"/> {selectedOrder.grantId}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                                                <div className="text-2xl font-bold text-slate-800 tracking-tight">{selectedOrder.currency} {selectedOrder.total.toLocaleString()}</div>
+                                                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">Total Est. Cost</div>
+                                            </div>
+                                        </div>
 
-                                {/* Metadata Grid */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
-                                            <LinkIcon size={12} /> Resources
-                                        </h3>
-                                        <div className="flex flex-col gap-2">
-                                            {selectedOrder.materialLink ? (
-                                                <a href={selectedOrder.materialLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100 transition-colors">
-                                                    <LinkIcon size={14}/> View Material Page
-                                                </a>
-                                            ) : <span className="text-xs text-slate-400 italic pl-1">No material link provided</span>}
+                                        {/* Supervisor Controls Area */}
+                                        <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/60 space-y-3">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Supervisor Comments</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                                                        placeholder="Add internal notes here..."
+                                                        value={commentInput}
+                                                        onChange={(e) => setCommentInput(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Tracking / URL</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                                                        placeholder="e.g. https://courier.com/track/..."
+                                                        value={trackingInput}
+                                                        onChange={(e) => setTrackingInput(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
                                             
-                                            {selectedOrder.attachmentLink ? (
-                                                <a href={selectedOrder.attachmentLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100 transition-colors">
-                                                    <Download size={14}/> Download Quote
-                                                </a>
-                                            ) : <span className="text-xs text-slate-400 italic pl-1">No attachments</span>}
+                                            {/* Action Buttons */}
+                                            {activeView === 'approvals' && (
+                                                <div className="flex gap-2 pt-2">
+                                                    <button 
+                                                        onClick={() => handleDecision('Approved')}
+                                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-emerald-200"
+                                                    >
+                                                        <CheckCircle2 size={16} /> Approve
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDecision('Ordered')}
+                                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-blue-200"
+                                                    >
+                                                        <Truck size={16} /> Mark Ordered
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDecision('Followup')}
+                                                        className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm shadow-amber-200"
+                                                    >
+                                                        <AlertCircle size={16} /> Follow-up
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => { setRejectReason(commentInput); setIsRejectModalOpen(true); }}
+                                                        className="flex-1 bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 py-2.5 rounded-lg text-xs font-bold transition-all flex justify-center items-center gap-2"
+                                                    >
+                                                        <XCircle size={16} /> Deny
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
-                                            <ScrollText size={12} /> Justification
-                                        </h3>
-                                        <div className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 h-full">
-                                            {selectedOrder.justification || "No justification provided."}
+
+                                    {/* Detail Content Scrollable */}
+                                    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
+                                        {/* Items Table */}
+                                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center gap-2">
+                                                <Microscope size={14} className="text-indigo-500"/>
+                                                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Requisition Items</h3>
+                                            </div>
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="bg-white text-slate-500 font-semibold border-b border-slate-100">
+                                                    <tr>
+                                                        <th className="px-4 py-3">Item Description</th>
+                                                        <th className="px-4 py-3 text-right">Qty</th>
+                                                        <th className="px-4 py-3 text-right">Unit Price</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-50">
+                                                    {selectedOrder.items.map((item, idx) => (
+                                                        <tr key={idx} className="hover:bg-slate-50/50">
+                                                            <td className="px-4 py-3">
+                                                                <div className="font-medium text-slate-800">{item.name}</div>
+                                                                {item.pn && <div className="text-slate-400 text-[10px] mt-0.5">PN: {item.pn}</div>}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-slate-600 font-medium">{item.qty} {item.unit}</td>
+                                                            <td className="px-4 py-3 text-right text-slate-600 font-mono">{item.price}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Metadata Grid */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                                                <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
+                                                    <LinkIcon size={12} /> Resources
+                                                </h3>
+                                                <div className="flex flex-col gap-2">
+                                                    {selectedOrder.materialLink ? (
+                                                        <a href={selectedOrder.materialLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100 transition-colors">
+                                                            <LinkIcon size={14}/> View Material Page
+                                                        </a>
+                                                    ) : <span className="text-xs text-slate-400 italic pl-1">No material link provided</span>}
+                                                    
+                                                    {selectedOrder.attachmentLink ? (
+                                                        <a href={selectedOrder.attachmentLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100 transition-colors">
+                                                            <Download size={14}/> Download Quote
+                                                        </a>
+                                                    ) : <span className="text-xs text-slate-400 italic pl-1">No attachments</span>}
+                                                </div>
+                                            </div>
+                                            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                                                <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-3 flex items-center gap-2">
+                                                    <ScrollText size={12} /> Justification
+                                                </h3>
+                                                <div className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 h-full">
+                                                    {selectedOrder.justification || "No justification provided."}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+                                </>
+                                ) : (
+                                <div className="flex-1 flex items-center justify-center text-slate-400 flex-col bg-slate-50/30">
+                                    <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-4">
+                                        <Zap size={40} className="text-slate-200" />
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-500">Select a requisition to review details</p>
                                 </div>
+                                )}
                             </div>
                         </>
-                        ) : (
-                        <div className="flex-1 flex items-center justify-center text-slate-400 flex-col bg-slate-50/30">
-                            <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-4">
-                                <Zap size={40} className="text-slate-200" />
-                            </div>
-                            <p className="text-sm font-medium text-slate-500">Select a requisition to review details</p>
-                        </div>
-                        )}
-                    </div>
-                </>
-            )}
-        </div>
-      </main>
-
-      {/* Modal */}
-      {isRejectModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200 border border-slate-200">
-            <div className="mb-4 flex items-center gap-3">
-                <div className="p-3 bg-rose-100 rounded-full text-rose-600"><XCircle size={24}/></div>
-                <div>
-                    <h2 className="text-lg font-bold text-slate-900">Deny Request</h2>
-                    <p className="text-xs text-slate-500">This action will notify the researcher.</p>
+                    )}
                 </div>
+              </main>
+
+              {/* Modal */}
+              {isRejectModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center backdrop-blur-sm">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200 border border-slate-200">
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className="p-3 bg-rose-100 rounded-full text-rose-600"><XCircle size={24}/></div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Deny Request</h2>
+                            <p className="text-xs text-slate-500">This action will notify the researcher.</p>
+                        </div>
+                    </div>
+                    
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2 ml-1">Reason for Denial</label>
+                    <textarea
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none min-h-[120px] mb-4 resize-none shadow-inner bg-slate-50"
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="e.g. Insufficient grant funds, item already in stock..."
+                      autoFocus
+                    ></textarea>
+                    
+                    <div className="flex gap-3 justify-end pt-2">
+                      <button 
+                        onClick={() => setIsRejectModalOpen(false)}
+                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleDecision('Denied')}
+                        disabled={!rejectReason.trim()}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-sm shadow-md shadow-rose-200 disabled:opacity-50 disabled:shadow-none transition-all"
+                      >
+                        Confirm Denial
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Toast */}
+              {toast && (
+                <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-2xl text-white text-sm font-medium flex items-center animate-in fade-in slide-in-from-bottom-4 z-50 border border-white/10 ${toast.type === 'error' ? 'bg-rose-600' : 'bg-slate-800'}`}>
+                    {toast.type === 'error' ? <AlertCircle size={18} className="mr-2.5"/> : <CheckCircle2 size={18} className="mr-2.5"/>}
+                    {toast.msg}
+                </div>
+              )}
+
             </div>
-            
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-2 ml-1">Reason for Denial</label>
-            <textarea
-              className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none min-h-[120px] mb-4 resize-none shadow-inner bg-slate-50"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g. Insufficient grant funds, item already in stock..."
-              autoFocus
-            ></textarea>
-            
-            <div className="flex gap-3 justify-end pt-2">
-              <button 
-                onClick={() => setIsRejectModalOpen(false)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => handleDecision('Denied')}
-                disabled={!rejectReason.trim()}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-sm shadow-md shadow-rose-200 disabled:opacity-50 disabled:shadow-none transition-all"
-              >
-                Confirm Denial
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        };
 
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-2xl text-white text-sm font-medium flex items-center animate-in fade-in slide-in-from-bottom-4 z-50 border border-white/10 ${toast.type === 'error' ? 'bg-rose-600' : 'bg-slate-800'}`}>
-            {toast.type === 'error' ? <AlertCircle size={18} className="mr-2.5"/> : <CheckCircle2 size={18} className="mr-2.5"/>}
-            {toast.msg}
-        </div>
-      )}
-
-    </div>
-  );
-};
-
-export default LabProcurementSystem;
+        const root = createRoot(document.getElementById('root'));
+        root.render(<LabProcurementSystem />);
+    </script>
+</body>
+</html>
