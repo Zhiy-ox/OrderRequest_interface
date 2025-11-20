@@ -98,7 +98,7 @@
           FileText, History, MoreHorizontal, ArrowUpRight, Building2, Calendar, 
           Download, Briefcase, CreditCard, X, Microscope, Beaker, Zap, 
           GraduationCap, ScrollText, Loader2, RefreshCw, Link as LinkIcon, 
-          Truck, Layers, Hexagon, Sparkles, MessageSquare, Shield, Eye, FileWarning, TrendingUp
+          Truck, Layers, Hexagon, Sparkles, MessageSquare, Shield, Eye, FileWarning, TrendingUp, Settings
         } from 'lucide-react';
 
         // --- CONFIGURATION: POWER AUTOMATE ENDPOINTS ---
@@ -108,22 +108,17 @@
         };
         
         const CACHE_KEY = 'smp_orders_cache';
-
-        // --- GEMINI API CONFIG ---
-        const GEMINI_API_KEY = ""; // Provided by environment
+        const API_KEY_STORAGE = 'smp_gemini_key';
 
         // --- INLINE SVG: DEPARTMENT OF ENGINEERING SCIENCE LOGO ---
         const EngineeringLogo = () => (
             <svg viewBox="0 0 800 220" className="w-full h-full drop-shadow-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Shield Group */}
                 <g id="shield" transform="translate(0, 10) scale(0.6)">
                     <path d="M150 295C150 295 250 250 250 130V40H50V130C50 250 150 295 150 295Z" fill="#002147" stroke="#FFFFFF" strokeWidth="5"/>
                     <path d="M150 130V40H50V130H150Z" fill="#002147"/>
                     <path d="M250 130V40H150V130H250Z" fill="#002147"/>
                     <path d="M150 295C150 295 50 250 50 130H150V295Z" fill="#002147"/>
                     <path d="M150 295C150 295 250 250 250 130H150V295Z" fill="#002147"/>
-                    
-                    {/* Open Book */}
                     <rect x="90" y="70" width="120" height="90" fill="#FFFFFF"/>
                     <text x="115" y="100" fontSize="20" fill="#002147" fontFamily="serif" fontWeight="bold">DOMI</text>
                     <text x="165" y="100" fontSize="20" fill="#002147" fontFamily="serif" fontWeight="bold">MINA</text>
@@ -131,17 +126,11 @@
                     <text x="165" y="125" fontSize="20" fill="#002147" fontFamily="serif" fontWeight="bold">TIO</text>
                     <text x="115" y="150" fontSize="20" fill="#002147" fontFamily="serif" fontWeight="bold">ILLV</text>
                     <text x="165" y="150" fontSize="20" fill="#002147" fontFamily="serif" fontWeight="bold">MEA</text>
-                    
-                    {/* Crowns */}
                     <path d="M100 30 L110 50 L120 30 L130 50 L140 30 L140 55 L100 55 Z" fill="#F1BE48" />
                     <path d="M160 30 L170 50 L180 30 L190 50 L200 30 L200 55 L160 55 Z" fill="#F1BE48" />
                     <path d="M130 200 L140 220 L150 200 L160 220 L170 200 L170 225 L130 225 Z" fill="#F1BE48" />
                 </g>
-                
-                {/* Vertical Separator Line */}
                 <line x1="180" y1="20" x2="180" y2="180" stroke="#FFFFFF" strokeWidth="2" opacity="0.5" />
-                
-                {/* Text Group */}
                 <g transform="translate(200, 40)">
                     <text x="0" y="35" fontSize="28" fill="#FFFFFF" fontFamily="sans-serif" letterSpacing="1" fontWeight="400">DEPARTMENT OF</text>
                     <text x="0" y="85" fontSize="42" fill="#FFFFFF" fontFamily="serif" letterSpacing="0.5" fontWeight="bold">ENGINEERING</text>
@@ -185,7 +174,7 @@
           }
         };
 
-        // --- MOCK DATA (Soft Matter Context) ---
+        // --- MOCK DATA ---
         const MOCK_REQUISITIONS = [
           {
             id: 'REQ-2024-201',
@@ -226,32 +215,10 @@
             justification: 'Substrates for electric field switching cells.',
             supplier: 'Diamond Coatings',
             trackingUrl: ''
-          },
-          {
-            id: 'REQ-2024-198',
-            requestor: 'Prof. A. Smith',
-            group: 'Admin',
-            requestDate: '2024-11-15',
-            total: 2100.00,
-            currency: 'GBP',
-            status: 'Approved',
-            priority: 'Normal',
-            description: 'New Spin Coater Chucks',
-            grantId: 'INSTITUTE-FUND',
-            items: [
-              { id: 1, name: 'Vacuum Chuck for 10mm Substrates', qty: 1, unit: 'ea', price: 2100.00, total: 2100.00 }
-            ],
-            history: [
-              { date: '2024-11-15 10:00', action: 'Submitted', user: 'A. Smith' },
-              { date: '2024-11-15 14:00', action: 'Approved', user: 'Finance Team' }
-            ],
-            justification: 'Required for small sample processing.',
-            supplier: 'Laurell Technologies',
-            trackingUrl: 'https://fedex.com/track/123456'
           }
         ];
 
-        // --- SWIPEABLE LIST ITEM COMPONENT ---
+        // --- SWIPEABLE CARD ---
         const SwipeableOrderCard = ({ order, selected, onClick, onSwipeRight, onSwipeLeft, index }) => {
             const [offsetX, setOffsetX] = useState(0);
             const [isDragging, setIsDragging] = useState(false);
@@ -266,18 +233,13 @@
                 if (!isDragging) return;
                 const currentX = e.touches[0].clientX;
                 const diff = currentX - touchStartX.current;
-                if (Math.abs(diff) < 150) {
-                    setOffsetX(diff);
-                }
+                if (Math.abs(diff) < 150) setOffsetX(diff);
             };
 
             const handleTouchEnd = () => {
                 setIsDragging(false);
-                if (offsetX > 100) {
-                    onSwipeRight(order.id);
-                } else if (offsetX < -100) {
-                    onSwipeLeft(order.id);
-                }
+                if (offsetX > 100) onSwipeRight(order.id);
+                else if (offsetX < -100) onSwipeLeft(order.id);
                 setOffsetX(0);
             };
 
@@ -333,6 +295,10 @@
           const [searchQuery, setSearchQuery] = useState('');
           const [statusFilter, setStatusFilter] = useState('All');
           
+          // Settings
+          const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+          const [apiKey, setApiKey] = useState('');
+          
           // Action State
           const [trackingInput, setTrackingInput] = useState('');
           const [commentInput, setCommentInput] = useState('');
@@ -350,24 +316,27 @@
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [toast, setToast] = useState(null);
 
-          // --- Data Loading (With Caching) ---
+          // Load settings on mount
+          useEffect(() => {
+             const savedKey = localStorage.getItem(API_KEY_STORAGE);
+             if (savedKey) setApiKey(savedKey);
+          }, []);
+
+          const saveSettings = () => {
+             localStorage.setItem(API_KEY_STORAGE, apiKey);
+             setIsSettingsOpen(false);
+             showToast("API Key Saved");
+          };
+
+          // --- Data Loading ---
           const loadData = useCallback(async () => {
             setIsLoading(true);
-            
-            // 1. Check Cache first
             const cachedData = localStorage.getItem(CACHE_KEY);
             if (cachedData) {
-                try {
-                    setOrders(JSON.parse(cachedData));
-                    setIsLoading(false); 
-                } catch (e) {
-                    console.error("Cache parse error", e);
-                }
+                try { setOrders(JSON.parse(cachedData)); setIsLoading(false); } catch (e) {}
             }
-
-            // 2. Fetch fresh from API
-            const data = await fetchFromSharePoint();
             
+            const data = await fetchFromSharePoint();
             if (data && Array.isArray(data)) {
                 const formattedData = data.map(item => ({
                     id: item.ID,
@@ -395,16 +364,10 @@
                     trackingUrl: item.The_Order_Tracking_URL,
                     supervisorComment: item.Comments_by_Supervisor
                 }));
-                
                 setOrders(formattedData);
-                // Update Cache
                 localStorage.setItem(CACHE_KEY, JSON.stringify(formattedData));
-            } else {
-                // If API fails and no cache, use mock
-                if (!cachedData) {
-                    setOrders(MOCK_REQUISITIONS);
-                    console.log("Using Offline Mode (Mock Data)");
-                }
+            } else if (!cachedData) {
+                setOrders(MOCK_REQUISITIONS);
             }
             setIsLoading(false);
           }, []);
@@ -413,7 +376,6 @@
             loadData();
           }, [loadData]);
 
-          // Reset AI state when selection changes
           useEffect(() => {
               if (selectedOrder) {
                   setTrackingInput(selectedOrder.trackingUrl || '');
@@ -422,7 +384,6 @@
               }
           }, [selectedOrderId]);
 
-          // --- Helpers ---
           const showToast = (msg, type = 'success') => {
             setToast({ msg, type });
             setTimeout(() => setToast(null), 3000);
@@ -431,9 +392,9 @@
           // --- GEMINI FUNCTIONS ---
           const runAiAudit = async () => {
             if (!selectedOrder) return;
+            if (!apiKey) { setIsSettingsOpen(true); showToast("Please add API Key first", "error"); return; }
+            
             setIsAiLoading(true);
-
-            // Prepare History Context for Duplicates
             const historyContext = orders
                 .filter(o => o.id !== selectedOrder.id)
                 .slice(0, 30)
@@ -469,7 +430,7 @@
               }`;
 
             try {
-              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
@@ -477,23 +438,25 @@
               const data = await response.json();
               const result = JSON.parse(data.candidates[0].content.parts[0].text);
               setAiAuditResult(result);
-            } catch (e) { showToast("AI Audit failed.", 'error'); } 
+            } catch (e) { showToast("AI Audit failed. Check API Key.", 'error'); } 
             finally { setIsAiLoading(false); }
           };
 
           const draftRejectionMessage = async () => {
              if (!rejectReason) { showToast("Enter a reason first", "error"); return; }
+             if (!apiKey) { setIsSettingsOpen(true); showToast("Please add API Key first", "error"); return; }
+             
              setAiDraftLoading(true);
              const prompt = `Draft polite rejection email for PhD student regarding "${selectedOrder.description}". Reason: "${rejectReason}". Tone: Professional mentorship. Max 50 words.`;
              try {
-               const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
+               const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                  method: 'POST',
                  headers: {'Content-Type': 'application/json'},
                  body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                });
                const data = await response.json();
                setRejectReason(data.candidates[0].content.parts[0].text.trim());
-             } catch(e) { console.error(e); } 
+             } catch(e) { console.error(e); showToast("AI failed. Check API Key.", "error"); } 
              finally { setAiDraftLoading(false); }
           };
 
@@ -505,16 +468,12 @@
             } else if (activeView === 'history') {
                 viewSet = orders.filter(o => o.status !== 'Undecided' && o.status !== 'Followup');
             }
-
-            return viewSet.filter(order => {
-              const matchesSearch = 
-                String(order.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.requestor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.description.toLowerCase().includes(searchQuery.toLowerCase());
-              
-              const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-              return matchesSearch && matchesStatus;
-            });
+            return viewSet.filter(order => 
+              (String(order.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
+              order.requestor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              order.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
+              (statusFilter === 'All' || order.status === statusFilter)
+            );
           }, [orders, searchQuery, statusFilter, activeView]);
 
           // Auto-select
@@ -569,24 +528,20 @@
              setIsRejectModalOpen(true);
           };
 
-          // --- UI Components ---
           const StatusBadge = ({ status }) => {
             const styles = {
               Undecided: 'bg-slate-100/80 text-slate-600 border-slate-200 backdrop-blur-sm',
               Followup: 'bg-amber-100/80 text-amber-700 border-amber-200 backdrop-blur-sm',
               Approved: 'bg-emerald-100/80 text-emerald-700 border-emerald-200 backdrop-blur-sm',
               Ordered: 'bg-blue-100/80 text-blue-700 border-blue-200 backdrop-blur-sm',
-              Denied: 'bg-rose-100/80 text-rose-700 border-rose-200 backdrop-blur-sm',
-              Finished: 'bg-gray-100/80 text-gray-600 border-gray-200 backdrop-blur-sm'
+              Denied: 'bg-rose-100/80 text-rose-700 border-rose-200 backdrop-blur-sm'
             };
-            
             const icons = {
               Undecided: <AlertCircle size={12} className="mr-1.5"/>,
               Followup: <RefreshCw size={12} className="mr-1.5"/>,
               Denied: <XCircle size={12} className="mr-1.5"/>,
               Default: <CheckCircle2 size={12} className="mr-1.5"/>
             };
-
             return (
               <span className={`flex items-center w-fit px-2.5 py-1 rounded-full text-[10px] font-semibold border shadow-sm ${styles[status] || 'bg-slate-100'}`}>
                 {icons[status] || icons.Default}
@@ -607,43 +562,26 @@
                         </div>
                         <span className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold mt-1 pl-1">Soft Matter Photonics Group</span>
                     </div>
-                    <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white transition-colors absolute top-4 right-4">
-                        <X size={20}/>
-                    </button>
+                    <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white transition-colors absolute top-4 right-4"><X size={20}/></button>
                 </div>
 
                 <nav className="flex-1 py-8 px-4 space-y-3">
-                  <div className="px-2 text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-wider flex items-center gap-2">
-                     <Layers size={10} /> Procurement
-                  </div>
-                  
+                  <div className="px-2 text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-wider flex items-center gap-2"><Layers size={10} /> Procurement</div>
                   <button onClick={() => setActiveView('approvals')} className={`w-full flex items-center px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-300 group ${activeView === 'approvals' ? 'bg-indigo-500/20 text-white border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]' : 'hover:bg-white/5 hover:text-white text-slate-400 border border-transparent'}`}>
                     <CheckCircle2 size={18} className={`mr-3 transition-colors ${activeView === 'approvals' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
                     Approvals
                     {stats.pendingCount > 0 && <span className="ml-auto bg-indigo-500 text-white text-[10px] font-bold py-0.5 px-2 rounded-full shadow-lg min-w-[24px] text-center animate-pulse">{stats.pendingCount}</span>}
                   </button>
-                  
                   <button onClick={() => setActiveView('history')} className={`w-full flex items-center px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-300 ${activeView === 'history' ? 'bg-indigo-500/20 text-white border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]' : 'hover:bg-white/5 hover:text-white text-slate-400 border border-transparent'}`}>
-                    <History size={18} className={`mr-3 transition-colors ${activeView === 'history' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> 
-                    History
-                  </button>
-                  
-                  <div className="px-2 text-[10px] font-bold uppercase text-slate-400 mt-8 mb-2 tracking-wider flex items-center gap-2">
-                     <Beaker size={10} /> Admin
-                  </div>
-
-                  <button className="w-full flex items-center px-4 py-3.5 rounded-2xl text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white border border-transparent transition-all">
-                     <User size={18} className="mr-3 text-slate-500 group-hover:text-white"/> Lab Members
+                    <History size={18} className={`mr-3 transition-colors ${activeView === 'history' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-white'}`} /> History
                   </button>
                 </nav>
 
                 <div className="p-4 m-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner">
-                        <GraduationCap size={18} />
-                    </div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner"><GraduationCap size={18} /></div>
                     <div className="flex flex-col">
-                      <p className="text-xs font-bold text-white">Prof. Supervisor</p>
+                      <p className="text-xs font-bold text-white">Prof. Stephen.Morris</p>
                       <p className="text-[10px] text-slate-400">Head of Group</p>
                     </div>
                   </div>
@@ -656,26 +594,25 @@
                 {/* Top Header */}
                 <header className="h-20 glass-panel border-b-0 border-x-0 border-t-0 flex items-center justify-between px-8 shrink-0 z-10 sticky top-0 m-4 rounded-2xl mx-6">
                   <div className="flex items-center">
-                    <button onClick={() => setIsSidebarOpen(true)} className="mr-4 lg:hidden p-2 hover:bg-white/50 rounded-xl text-slate-600 transition-colors">
-                        <Menu size={20} />
-                    </button>
+                    <button onClick={() => setIsSidebarOpen(true)} className="mr-4 lg:hidden p-2 hover:bg-white/50 rounded-xl text-slate-600 transition-colors"><Menu size={20} /></button>
                     <div>
                         <h1 className="text-xl font-bold text-slate-800 tracking-tight drop-shadow-sm">
                             {activeView === 'approvals' ? 'SMP Order System' : 'Processed Orders'}
                         </h1>
                         <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                            {activeView === 'approvals' ? 'Review and approve pending lab orders' : 'Archive of all past transactions'}
+                            {activeView === 'approvals' ? 'Review pending lab orders' : 'Archive'}
                         </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <button 
-                        onClick={() => { localStorage.removeItem(CACHE_KEY); loadData(); }} 
-                        className={`p-2.5 rounded-xl border border-white/50 bg-white/30 text-slate-500 hover:text-indigo-600 hover:bg-white/60 transition-all shadow-sm ${isLoading ? 'animate-spin text-indigo-600' : ''}`}
-                        title="Force Sync"
-                    >
-                       <RefreshCw size={18} />
+                    <button onClick={() => setIsSettingsOpen(true)} className="p-2.5 rounded-xl border border-white/50 bg-white/30 text-slate-500 hover:text-indigo-600 hover:bg-white/60 transition-all shadow-sm" title="Settings">
+                        <Settings size={18} />
                     </button>
+                    <div className="h-8 w-px bg-slate-300/50 mx-2"></div>
+                    <div className="relative cursor-pointer group p-2.5 rounded-xl hover:bg-white/40 transition-colors">
+                       <Bell className="text-slate-500 group-hover:text-indigo-600 transition-colors" size={20} />
+                       {stats.pendingCount > 0 && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white shadow-md"></span>}
+                    </div>
                   </div>
                 </header>
 
@@ -691,13 +628,7 @@
                             </div>
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search ID, Material..." 
-                                    className="glass-input pl-9 pr-3 py-2 rounded-xl text-xs w-48 focus:outline-none placeholder:text-slate-400 text-slate-700"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
+                                <input type="text" placeholder="Search ID, Material..." className="glass-input pl-9 pr-3 py-2 rounded-xl text-xs w-48 focus:outline-none placeholder:text-slate-400 text-slate-700" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                             </div>
                         </div>
                         
@@ -711,16 +642,12 @@
                                     onClick={() => setSelectedOrderId(order.id)}
                                     onSwipeRight={onSwipeRight}
                                     onSwipeLeft={onSwipeLeft}
-                                    enabled={activeView === 'approvals'}
                                     index={idx}
                                 />
                             ))}
-                            
                             {filteredOrders.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 min-h-[200px]">
-                                    <div className="bg-white/40 p-4 rounded-full mb-3 shadow-inner">
-                                        <Briefcase size={24} className="opacity-40" />
-                                    </div>
+                                    <Briefcase size={24} className="opacity-40 mb-3" />
                                     <p className="text-xs font-medium">No matching requisitions</p>
                                 </div>
                             )}
@@ -740,12 +667,8 @@
                                             <StatusBadge status={selectedOrder.status} />
                                         </div>
                                         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                                            <span className="flex items-center bg-white/60 px-3 py-1.5 rounded-lg font-medium text-slate-600 border border-white/80 shadow-sm">
-                                                <FileText size={12} className="mr-2 text-slate-400"/> {selectedOrder.id}
-                                            </span>
-                                            <span className="flex items-center bg-indigo-50/80 text-indigo-700 px-3 py-1.5 rounded-lg font-mono font-medium border border-indigo-100/50 shadow-sm">
-                                                <Building2 size={12} className="mr-2"/> {selectedOrder.grantId}
-                                            </span>
+                                            <span className="flex items-center bg-white/60 px-3 py-1.5 rounded-lg font-medium text-slate-600 border border-white/80 shadow-sm"><FileText size={12} className="mr-2 text-slate-400"/> {selectedOrder.id}</span>
+                                            <span className="flex items-center bg-indigo-50/80 text-indigo-700 px-3 py-1.5 rounded-lg font-mono font-medium border border-indigo-100/50 shadow-sm"><Building2 size={12} className="mr-2"/> {selectedOrder.grantId}</span>
                                         </div>
                                     </div>
                                     <div className="text-right bg-white/60 px-5 py-3 rounded-xl border border-white/80 shadow-sm">
@@ -754,181 +677,83 @@
                                     </div>
                                 </div>
 
-                                {/* AI Audit Block */}
+                                {/* AI Audit */}
                                 <div className="mb-6">
                                     {!aiAuditResult ? (
-                                        <button 
-                                            onClick={runAiAudit}
-                                            disabled={isAiLoading}
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-100/50 text-indigo-700 rounded-xl text-xs font-bold hover:shadow-md hover:from-white hover:to-white transition-all disabled:opacity-50 active:scale-[0.99]"
-                                        >
+                                        <button onClick={runAiAudit} disabled={isAiLoading} className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-100/50 text-indigo-700 rounded-xl text-xs font-bold hover:shadow-md hover:from-white hover:to-white transition-all disabled:opacity-50 active:scale-[0.99]">
                                             {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="text-purple-500" />}
                                             {isAiLoading ? 'Analyzing Requisition...' : 'Run AI Safety & Compliance Audit'}
                                         </button>
                                     ) : (
                                         <div className="bg-gradient-to-br from-white/80 to-purple-50/30 border border-purple-100 rounded-xl p-5 shadow-sm animate-fade-in-up space-y-3">
                                             <div className="flex justify-between items-start">
-                                                <h3 className="text-xs font-bold text-purple-800 flex items-center gap-2">
-                                                    <Sparkles size={14} /> AI Analysis Report
-                                                </h3>
-                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                                                    aiAuditResult.rating === 'Safe' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                    aiAuditResult.rating === 'Caution' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                    'bg-rose-50 text-rose-700 border-rose-200'
-                                                }`}>
-                                                    {aiAuditResult.rating}
-                                                </span>
+                                                <h3 className="text-xs font-bold text-purple-800 flex items-center gap-2"><Sparkles size={14} /> AI Analysis Report</h3>
+                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${aiAuditResult.rating === 'Safe' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : aiAuditResult.rating === 'Caution' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>{aiAuditResult.rating}</span>
                                             </div>
-                                            
                                             <p className="text-xs text-slate-600 leading-relaxed">{aiAuditResult.summary}</p>
-                                            
-                                            {/* New AI Fields */}
                                             <div className="grid grid-cols-2 gap-2 pt-1">
-                                                {aiAuditResult.priceAlert && (
-                                                    <div className="bg-amber-50/80 border border-amber-100 p-2 rounded-lg text-[10px] text-amber-800 flex gap-2 items-start">
-                                                        <TrendingUp size={12} className="shrink-0 mt-0.5"/> {aiAuditResult.priceAlert}
-                                                    </div>
-                                                )}
-                                                {aiAuditResult.duplicates && aiAuditResult.duplicates.length > 0 && (
-                                                    <div className="bg-blue-50/80 border border-blue-100 p-2 rounded-lg text-[10px] text-blue-800 flex gap-2 items-start">
-                                                        <History size={12} className="shrink-0 mt-0.5"/> 
-                                                        <div>Possible Duplicates: {aiAuditResult.duplicates.join(", ")}</div>
-                                                    </div>
-                                                )}
-                                                {aiAuditResult.msdsUrl && (
-                                                    <a href={aiAuditResult.msdsUrl} target="_blank" className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-2 rounded-lg text-[10px] text-slate-600 flex gap-2 items-center transition-colors col-span-2">
-                                                        <FileWarning size={12} /> View Material Safety Data Sheet (MSDS)
-                                                    </a>
-                                                )}
+                                                {aiAuditResult.priceAlert && <div className="bg-amber-50/80 border border-amber-100 p-2 rounded-lg text-[10px] text-amber-800 flex gap-2 items-start"><TrendingUp size={12} className="shrink-0 mt-0.5"/> {aiAuditResult.priceAlert}</div>}
+                                                {aiAuditResult.duplicates && aiAuditResult.duplicates.length > 0 && <div className="bg-blue-50/80 border border-blue-100 p-2 rounded-lg text-[10px] text-blue-800 flex gap-2 items-start"><History size={12} className="shrink-0 mt-0.5"/> <div>Possible Duplicates: {aiAuditResult.duplicates.join(", ")}</div></div>}
+                                                {aiAuditResult.msdsUrl && <a href={aiAuditResult.msdsUrl} target="_blank" className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-2 rounded-lg text-[10px] text-slate-600 flex gap-2 items-center transition-colors col-span-2"><FileWarning size={12} /> View Material Safety Data Sheet (MSDS)</a>}
                                             </div>
-
-                                            {aiAuditResult.hazards && aiAuditResult.hazards.length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                                    {aiAuditResult.hazards.map((h, i) => (
-                                                        <span key={i} className="px-2 py-0.5 bg-rose-50 text-rose-700 text-[10px] font-medium rounded-md border border-rose-100">
-                                                            ⚠️ {h}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Supervisor Controls Area */}
+                                {/* Supervisor Controls */}
                                 <div className="bg-white/40 p-5 rounded-2xl border border-white/50 shadow-inner space-y-4">
                                     <div className="grid grid-cols-2 gap-5">
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Supervisor Comments</label>
-                                            <input 
-                                                type="text" 
-                                                className="glass-input w-full text-xs p-3 rounded-xl text-slate-700 placeholder:text-slate-400"
-                                                placeholder="Add internal notes here..."
-                                                value={commentInput}
-                                                onChange={(e) => setCommentInput(e.target.value)}
-                                            />
+                                            <input type="text" className="glass-input w-full text-xs p-3 rounded-xl text-slate-700 placeholder:text-slate-400" placeholder="Add internal notes here..." value={commentInput} onChange={(e) => setCommentInput(e.target.value)} />
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Tracking / URL</label>
-                                            <input 
-                                                type="text" 
-                                                className="glass-input w-full text-xs p-3 rounded-xl text-slate-700 placeholder:text-slate-400"
-                                                placeholder="e.g. https://courier.com/track/..."
-                                                value={trackingInput}
-                                                onChange={(e) => setTrackingInput(e.target.value)}
-                                            />
+                                            <input type="text" className="glass-input w-full text-xs p-3 rounded-xl text-slate-700 placeholder:text-slate-400" placeholder="e.g. https://courier.com/track/..." value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} />
                                         </div>
                                     </div>
-                                    
-                                    {/* Action Buttons */}
                                     {activeView === 'approvals' && (
                                         <div className="flex gap-3 pt-2">
-                                            <button onClick={() => handleDecision('Approved')} className="flex-1 bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-[0.98]">
-                                                <CheckCircle2 size={16} /> Approve
-                                            </button>
-                                            <button onClick={() => handleDecision('Ordered')} className="flex-1 bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 active:scale-[0.98]">
-                                                <Truck size={16} /> Mark Ordered
-                                            </button>
-                                            <button onClick={() => handleDecision('Followup')} className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 active:scale-[0.98]">
-                                                <AlertCircle size={16} /> Follow-up
-                                            </button>
-                                            <button onClick={() => { setRejectReason(commentInput); setIsRejectModalOpen(true); }} className="flex-1 bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]">
-                                                <XCircle size={16} /> Deny
-                                            </button>
+                                            <button onClick={() => handleDecision('Approved')} className="flex-1 bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-[0.98]"><CheckCircle2 size={16} /> Approve</button>
+                                            <button onClick={() => handleDecision('Ordered')} className="flex-1 bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 active:scale-[0.98]"><Truck size={16} /> Mark Ordered</button>
+                                            <button onClick={() => handleDecision('Followup')} className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-white py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 active:scale-[0.98]"><AlertCircle size={16} /> Follow-up</button>
+                                            <button onClick={() => { setRejectReason(commentInput); setIsRejectModalOpen(true); }} className="flex-1 bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"><XCircle size={16} /> Deny</button>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Detail Content Scrollable */}
+                            {/* Detail Content */}
                             <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                                {/* Items Table */}
                                 <div className="glass-panel rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="bg-white/40 px-6 py-3 border-b border-slate-100 flex items-center gap-2">
-                                        <Microscope size={14} className="text-indigo-500"/>
-                                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Requisition Items</h3>
-                                    </div>
+                                    <div className="bg-white/40 px-6 py-3 border-b border-slate-100 flex items-center gap-2"><Microscope size={14} className="text-indigo-500"/><h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Requisition Items</h3></div>
                                     <table className="w-full text-xs text-left">
-                                        <thead className="bg-white/20 text-slate-500 font-semibold border-b border-slate-100">
-                                            <tr>
-                                                <th className="px-6 py-3">Item Description</th>
-                                                <th className="px-6 py-3 text-right">Qty</th>
-                                                <th className="px-6 py-3 text-right">Unit Price</th>
-                                            </tr>
-                                        </thead>
+                                        <thead className="bg-white/20 text-slate-500 font-semibold border-b border-slate-100"><tr><th className="px-6 py-3">Item Description</th><th className="px-6 py-3 text-right">Qty</th><th className="px-6 py-3 text-right">Unit Price</th></tr></thead>
                                         <tbody className="divide-y divide-slate-50/50">
                                             {selectedOrder.items.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-white/30 transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <div className="font-medium text-slate-800 text-sm">{item.name}</div>
-                                                        {item.pn && <div className="text-slate-400 text-[10px] mt-0.5 font-mono">PN: {item.pn}</div>}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-slate-600 font-medium">{item.qty} {item.unit}</td>
-                                                    <td className="px-6 py-4 text-right text-slate-600 font-mono">{item.price}</td>
-                                                </tr>
+                                                <tr key={idx} className="hover:bg-white/30 transition-colors"><td className="px-6 py-4"><div className="font-medium text-slate-800 text-sm">{item.name}</div></td><td className="px-6 py-4 text-right text-slate-600 font-medium">{item.qty} {item.unit}</td><td className="px-6 py-4 text-right text-slate-600 font-mono">{item.price}</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-
-                                {/* Metadata Grid */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="p-6 glass-panel rounded-2xl shadow-sm hover:shadow-md transition-all">
-                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-4 flex items-center gap-2">
-                                            <LinkIcon size={12} /> Resources
-                                        </h3>
+                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-4 flex items-center gap-2"><LinkIcon size={12} /> Resources</h3>
                                         <div className="flex flex-col gap-3">
-                                            {selectedOrder.materialLink ? (
-                                                <a href={selectedOrder.materialLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-3 p-3 rounded-xl bg-indigo-50/30 border border-indigo-100/50 transition-colors hover:bg-indigo-50/60">
-                                                    <div className="p-1.5 bg-indigo-100 rounded-lg"><LinkIcon size={14}/></div> 
-                                                    View Material Page
-                                                </a>
-                                            ) : <span className="text-xs text-slate-400 italic pl-1">No material link provided</span>}
-                                            
-                                            {selectedOrder.attachmentLink ? (
-                                                <a href={selectedOrder.attachmentLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-3 p-3 rounded-xl bg-indigo-50/30 border border-indigo-100/50 transition-colors hover:bg-indigo-50/60">
-                                                    <div className="p-1.5 bg-indigo-100 rounded-lg"><Download size={14}/></div> 
-                                                    Download Quote
-                                                </a>
-                                            ) : <span className="text-xs text-slate-400 italic pl-1">No attachments</span>}
+                                            {selectedOrder.materialLink ? <a href={selectedOrder.materialLink} target="_blank" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-3 p-3 rounded-xl bg-indigo-50/30 border border-indigo-100/50 transition-colors hover:bg-indigo-50/60"><div className="p-1.5 bg-indigo-100 rounded-lg"><LinkIcon size={14}/></div> View Material Page</a> : <span className="text-xs text-slate-400 italic pl-1">No material link</span>}
+                                            {selectedOrder.attachmentLink ? <a href={selectedOrder.attachmentLink} target="_blank" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-3 p-3 rounded-xl bg-indigo-50/30 border border-indigo-100/50 transition-colors hover:bg-indigo-50/60"><div className="p-1.5 bg-indigo-100 rounded-lg"><Download size={14}/></div> Download Quote</a> : <span className="text-xs text-slate-400 italic pl-1">No attachments</span>}
                                         </div>
                                     </div>
                                     <div className="p-6 glass-panel rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col">
-                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-4 flex items-center gap-2">
-                                            <ScrollText size={12} /> Justification
-                                        </h3>
-                                        <div className="text-xs text-slate-600 leading-relaxed bg-white/40 p-4 rounded-xl border border-white/60 h-full shadow-inner">
-                                            {selectedOrder.justification || "No justification provided."}
-                                        </div>
+                                        <h3 className="text-[10px] font-bold uppercase text-slate-400 mb-4 flex items-center gap-2"><ScrollText size={12} /> Justification</h3>
+                                        <div className="text-xs text-slate-600 leading-relaxed bg-white/40 p-4 rounded-xl border border-white/60 h-full shadow-inner">{selectedOrder.justification || "No justification provided."}</div>
                                     </div>
                                 </div>
                             </div>
                         </>
                         ) : (
                         <div className="flex-1 flex items-center justify-center text-slate-400 flex-col">
-                            <div className="w-24 h-24 bg-white/30 rounded-3xl shadow-sm border border-white/40 flex items-center justify-center mb-6 animate-pulse">
-                                <Zap size={48} className="text-slate-300/50" />
-                            </div>
+                            <div className="w-24 h-24 bg-white/30 rounded-3xl shadow-sm border border-white/40 flex items-center justify-center mb-6 animate-pulse"><Zap size={48} className="text-slate-300/50" /></div>
                             <p className="text-sm font-medium text-slate-500">Select a requisition to review details</p>
                         </div>
                         )}
@@ -936,52 +761,41 @@
                 </div>
               </main>
 
-              {/* Modal */}
+              {/* Settings Modal */}
+              {isSettingsOpen && (
+                <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in-up">
+                  <div className="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl border-white/80">
+                    <h2 className="text-lg font-bold text-slate-800 mb-4">Application Settings</h2>
+                    <div className="mb-6">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Gemini API Key</label>
+                        <input type="password" className="glass-input w-full p-3 rounded-xl text-sm text-slate-700 placeholder:text-slate-400" placeholder="Paste your Google API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                        <p className="text-[10px] text-slate-400 mt-2 ml-1">Required for AI Audit & Drafting features. Stored locally.</p>
+                    </div>
+                    <div className="flex gap-3 justify-end pt-2">
+                        <button onClick={() => setIsSettingsOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm">Cancel</button>
+                        <button onClick={saveSettings} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm shadow-md">Save Settings</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reject Modal */}
               {isRejectModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in-up">
                   <div className="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl border-white/80">
                     <div className="mb-6 flex items-center gap-4">
                         <div className="p-4 bg-rose-100/80 rounded-2xl text-rose-600 shadow-sm border border-rose-200"><XCircle size={28}/></div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-800">Deny Request</h2>
-                            <p className="text-xs text-slate-500 mt-1">This action will notify the researcher.</p>
-                        </div>
+                        <div><h2 className="text-xl font-bold text-slate-800">Deny Request</h2><p className="text-xs text-slate-500 mt-1">This action will notify the researcher.</p></div>
                     </div>
-                    
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2.5 ml-1 tracking-wide">Reason for Denial</label>
-                    <textarea
-                      className="glass-input w-full rounded-2xl p-4 text-sm text-slate-700 outline-none min-h-[140px] mb-6 resize-none placeholder:text-slate-400"
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      placeholder="e.g. Insufficient grant funds, item already in stock..."
-                      autoFocus
-                    ></textarea>
-                    
-                    {/* AI Auto-Draft Button */}
+                    <textarea className="glass-input w-full rounded-2xl p-4 text-sm text-slate-700 outline-none min-h-[140px] mb-6 resize-none placeholder:text-slate-400" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Insufficient grant funds..." autoFocus></textarea>
                     <div className="flex flex-col gap-4">
-                        <button 
-                           onClick={draftRejectionMessage}
-                           disabled={aiDraftLoading}
-                           className="text-xs font-bold text-purple-600 flex items-center justify-center gap-2 hover:text-purple-800 transition-all disabled:opacity-50 hover:bg-purple-50 py-2 rounded-xl border border-transparent hover:border-purple-100"
-                        >
-                           {aiDraftLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>}
-                           Use AI to draft polite explanation
+                        <button onClick={draftRejectionMessage} disabled={aiDraftLoading} className="text-xs font-bold text-purple-600 flex items-center justify-center gap-2 hover:text-purple-800 transition-all disabled:opacity-50 hover:bg-purple-50 py-2 rounded-xl border border-transparent hover:border-purple-100">
+                           {aiDraftLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>} Use AI to draft polite explanation
                         </button>
-
                         <div className="flex gap-3 pt-2 border-t border-slate-200/50">
-                          <button 
-                            onClick={() => setIsRejectModalOpen(false)}
-                            className="flex-1 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-xs transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={() => handleDecision('Denied')}
-                            disabled={!rejectReason.trim()}
-                            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98]"
-                          >
-                            Confirm Denial
-                          </button>
+                          <button onClick={() => setIsRejectModalOpen(false)} className="flex-1 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-xs transition-colors">Cancel</button>
+                          <button onClick={() => handleDecision('Denied')} disabled={!rejectReason.trim()} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-200 disabled:opacity-50 active:scale-[0.98]">Confirm Denial</button>
                         </div>
                     </div>
                   </div>
